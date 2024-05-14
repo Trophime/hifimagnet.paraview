@@ -19,7 +19,7 @@ Optional
 * display 2D OxOy view for z in args.z
 * display theta plot for r in args.r and z in args.z
  
-example
+examples
 
 ```bash
 python statistics.py --help
@@ -66,7 +66,7 @@ deactivate
 
 References:
 
-* https://github.com/MeshInspector/MeshLib
+* [MeshLib](https://github.com/MeshInspector/MeshLib)
 * see https://stackoverflow.com/questions/61159587/measure-distance-between-meshes
 
 # To-do:
