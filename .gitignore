@@ -1,0 +1,6 @@
+*venv
+*.csv
+*.png
+*.stl
+
+*~
