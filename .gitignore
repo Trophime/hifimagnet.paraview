@@ -1,6 +1,8 @@
-*venv
+*-env
 *.csv
 *.png
 *.stl
+*.pvsm
 
 *~
+*log
