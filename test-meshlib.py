@@ -15,6 +15,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "files", nargs="*", type=str, help="input case file (ex. H1-surf0.stl)"
 )
+parser.add_argument(
+    "-rfiles", nargs="*", type=str, help="input case file (ex. R1-surf0.stl)"
+)
 parser.add_argument("--innerbore", type=float, help="set inner bore radius in m")
 parser.add_argument("--outerbore", type=float, help="set outer bore radius in m")
 parser.add_argument(
@@ -27,7 +30,9 @@ print(f"args: {args}")
 
 # natsort files
 files = natsorted(args.files)
-
+rfiles = []
+if args.rfiles:
+    rfiles = natsorted(args.rfiles)
 shift = 1
 
 # create an stl for inner and outer bore
@@ -49,8 +54,6 @@ if args.outerbore:
 # Original
 index = []
 original = []
-deformed = []
-expand = []
 df = pd.DataFrame()
 
 for i in range(len(files) - 1):
@@ -61,8 +64,23 @@ for i in range(len(files) - 1):
     index.append(f"Channel{i+shift}")
     original.append(z.signedDist / 1.0e-3)
 
+if rfiles:
+    roriginal = []
+    # TODO R1/innerbore
+    for i in range(1, len(files) - 2):
+        mesh1 = mr.loadMesh(rfiles[i - 1])
+        mesh2 = mr.loadMesh(rfiles[i + 1])
+        z = mr.findSignedDistance(mesh1, mesh2)
+        print(
+            f"Channel{i+shift} R{i-1}/R{i+1}: {z.signedDist} m", flush=True
+        )  # around 0.8 mm
+        roriginal.append(z.signedDist / 1.0e-3)
+    # TODO R13/outerbore
+
 # Deformed
 if args.deformed:
+    deformed = []
+    expand = []
     dfiles = []
     for i, file in enumerate(files):
         (filename, ext) = file.split("0.")
@@ -77,6 +95,28 @@ if args.deformed:
         # print(f"Channel{i+shift}: {z.signedDist} m", flush=True)  # around 0.8 mm
         deformed.append(z.signedDist / 1.0e-3)
         expand.append((deformed[-1] / original[i] - 1) * 100.0)
+
+    if rfiles:
+        rdeformed = []
+        rexpand = []
+        dfiles = []
+        for i, file in enumerate(rfiles):
+            (filename, ext) = file.split("0.")
+            # print(f"filename={filename}, ext={ext}")
+            new_filename = f"{filename}-deformed0.{ext}"
+            dfiles.append(new_filename)
+
+        # TODO R1/innerbore
+        for i in range(1, len(files) - 2):
+            mesh1 = mr.loadMesh(dfiles[i - 1])
+            mesh2 = mr.loadMesh(dfiles[i + 1])
+            z = mr.findSignedDistance(mesh1, mesh2)
+            print(
+                f"Channel{i+shift} R{i-1}/R{i+1}: {z.signedDist} m", flush=True
+            )  # around 0.8 mm
+            rdeformed.append(z.signedDist / 1.0e-3)
+            rexpand.append((rdeformed[-1] / roriginal[i] - 1) * 100.0)
+        # TODO R13/outerbore
 
     df = pd.DataFrame.from_dict(
         {
