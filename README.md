@@ -52,7 +52,7 @@ Run:
 
 ```bash
 python3 ./test-meshlib.py --help
-python test-meshlib.py H*_Cu0.stl --deformed
+python test-meshlib.py H*_Cu0.stl [--rfiles R[0-9]0.stl R1[0-3]0.stl] --deformed
 ```
 
 To start the virtual env:
@@ -73,6 +73,11 @@ References:
 * see https://stackoverflow.com/questions/61159587/measure-distance-between-meshes
 
 # To-do:
+- [ ] monitor memory - for stats,histos improve by using selectblock instead of extractblock?
+- [ ] create a cli with argsparse command stasts,plots,views
+- [ ] split pv-statistics.py accordingly to cli commands (note add subparser option)
+- [ ] Add field for Magnetostatics and ThermoElectric physics
+- [ ] Add PlotOr and PlotOz
 - [ ] Test with MPI
 - [ ] Offset rendering - requires specific build options for paraview (see paraview downloads - healess ), '--force-offscreen-rendering'
 - [ ] Add min/max to legend
@@ -86,13 +91,16 @@ References:
 - [ ] Create Contour (see pv-contour.py)
 - [ ] Support for tensor
 - [ ] Create developed view of cylinder slice (see https://discourse.paraview.org/t/how-to-create-a-developed-view-of-a-cylinder-slice/14569, https://www.kitware.com/paraviews-python-programmable-filters-in-geophysics/, https://www.kitware.com/dataset-resampling-filters/)
-- [ ] Compute spherical harmonics from Sphere slice ?
+- [ ] Compute spherical harmonics from Sphere slice ? see shtools?
 - [ ] Create fieldunits, ignored_keys from json 
 - [ ] Add tools to read:write:add to fieldunits json
 - [ ] Create a CLI for post-processing operations by loading a json
 - [ ] Run in client/server mode
 
-
+- Open Questions:
+  - How to discard matplotlib plots when line is not in insert?
+  - Add statics per matplotlib?
+   
 <!-- example with pvpython and pvbatch
 connect with server?
 
@@ -106,5 +114,6 @@ a tester par block
 - [HiFiMagnet](https://github.com/feelpp/hifimagnet)
 - [Paraview](https://docs.paraview.org/en/latest/Tutorials/SelfDirectedTutorial/batchPythonScripting.html)
 
+<!--
 ![Control Camera in Paraview](/assets/images/Paraview-camera.png)
-
+--!>

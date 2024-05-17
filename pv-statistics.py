@@ -1221,7 +1221,9 @@ def meshinfo(
 
         """
         # To speed up Stats by blocks
-        # !!! add Standard Deviation form Mean and M2
+        # !!! add Standard Deviation form Mean and M2 !!!
+        # this would replace also createStatsTable
+
         print("Global Stats:", flush=True)
 
         for datatype in datadict:
@@ -1260,10 +1262,19 @@ def meshinfo(
                     "Variance",
                 ]
                 csv.drop(columns=dropped_keys, inplace=True)
+                
+                # Compute Standard Deviation
+                csv['Standard Deviation'] = sqrt(abs(csv["Mean"]**2 - csv["M2"]))
+                    
+                # Add Name 
+                (nrows, ncols) = csv.shape
+                csv['Name'] = [name for i in range(nrows)]
+
                 # Reorder columns
                 csv = csv[
                     [
                         "Variable",
+                        "Name",
                         "Minimum",
                         "Mean",
                         "Maximum",
@@ -1282,6 +1293,12 @@ def meshinfo(
                         showindex=False
                     )
                 )
+                    
+                # convert data to requested units, 
+                # add units for Variable
+                # set values with appropriate units
+
+                # per blocks
                 for i, block in enumerate(blockdata.keys()):
                     name = blockdata[block]["name"]
                     print(f"block[{i}]: extract {block}, name={name}", flush=True)
@@ -1336,34 +1353,18 @@ def meshinfo(
                         )
                     )
                 
-                for key in statistics.VariablesofInterest:
-                    found = False
-                    (physic, fieldname) = key.split(".")
-                    for excluded in fieldunits[fieldname]["Exclude"]:
-                        if excluded in name:
-                            found = True
-                            print(f"ignore block: {name}", flush=True)
-                            break
+                    # convert data to requested units, 
+                    # add units for Variable
+                    # set values with appropriate units
 
-                    if not found:
-                        Components = kdata["Components"]
-                        bounds = kdata["Bounds"]
-                        if bounds[0][0] != bounds[0][1]:
-                            if not "Stats" in kdata:
-                                # print(f"\t{key}: create kdata[Stats]")
-                                kdata["Stats"] = {}
-
-                            kdata["Stats"] = csv.query()
-
-                    
-                
-                
                 Delete(descriptiveStatisticsDisplay)
                 Delete(spreadSheetView)
                 del spreadSheetView
                 Delete(statistics)
                 del statistics
 
+        # concat csv per datatype
+                
 
         exit(1)
         """
