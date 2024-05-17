@@ -33,6 +33,7 @@ pd.options.mode.copy_on_write = True
 
 import argparse
 import os
+import gc
 
 from pint import UnitRegistry, Unit, Quantity
 
@@ -53,6 +54,13 @@ distance_unit = "millimeter"  # or "meter"
 # !!! watchout matplotlib setup for latex support and packages required !!!
 
 fieldunits = {
+    "coord": {
+        "Symbol": "r",
+        "Units": [
+            ureg.meter,
+            ureg.Unit(distance_unit),
+        ],
+    },
     "VolumicMass": {
         "Symbol": "rho",
         "mSymbol": r"$\rho$",
@@ -122,8 +130,12 @@ fieldunits = {
     },
     "Current": {"Symbol": "I", "Units": [ureg.ampere, ureg.ampere]},
     "Power": {"Symbol": "W", "Units": [ureg.watt, ureg.watt]},
-    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC]},
-    "electric_potential": {"Symbol": "V", "Units": [ureg.volt, ureg.volt]},
+    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC], "Exclude": ["Air"]},
+    "electric_potential": {
+        "Symbol": "V",
+        "Units": [ureg.volt, ureg.volt],
+        "Exclude": ["Air", "Isolant"],
+    },
     "current_density": {
         "Symbol": "J",
         "Units": [
@@ -345,6 +357,7 @@ ignored_keys = [
     "r",
     "Cos",
     "Sin",
+    "coord",
 ]
 with open("ignored_keys.json", "w") as fp:
     json.dump({"ignored_keys": ignored_keys}, fp, indent=4)
@@ -409,7 +422,7 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
     for datatype in _dataset:
         # print(f"datatype={datatype}")
         for key in _dataset[datatype]:
-            print(f"DescriptiveStats for datatype={datatype}, key={key}:")
+            # print(f"DescriptiveStats for datatype={datatype}, key={key}:")
             # print(f"dataset: {len(_dataset[datatype][key])}")
 
             (physic, fieldname) = key.split(".")
@@ -434,7 +447,7 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
             # for dset in _dataset[datatype][key]:
             #     print(tabulate(dset, headers="keys", tablefmt="psql"))
             df = pd.concat(_dataset[datatype][key])
-            print(f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:")
+            # print(f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:")
 
             # Reorder columns
             df = df[
@@ -521,7 +534,7 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
                     tabulate(df, headers="keys", tablefmt="psql", showindex=False),
                     flush=True,
                 )
-            df.to_csv(f"{key}-descriptivestats-create.csv")
+            df.to_csv(f"{key}-descriptivestats.csv")
             dfs.append(df)
 
     total_df = pd.DataFrame()
@@ -531,7 +544,13 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
             tabulate(total_df, headers="keys", tablefmt="psql", showindex=False),
             flush=True,
         )
-        total_df.to_csv(f"{name}-descriptivestats-create.csv")
+        total_df.to_csv(f"{name}-descriptivestats.csv")
+
+        # remove temporary csv files
+        for datatype in _dataset:
+            for key in _dataset[datatype]:
+                os.remove(f"{key}-descriptivestats.csv")
+                os.remove(f"{name}-{key}-descriptivestats.csv")
 
     return total_df
 
@@ -735,7 +754,9 @@ def getresultInfo(key, verbose: bool = False, printed: bool = True) -> dict:
     return datadict
 
 
-def resultStats(input, name: str, volume: float, verbose: bool = False) -> dict:
+def resultStats(
+    input, name: str, volume: float, histo: bool = False, verbose: bool = False
+) -> dict:
     """
     compute stats for PointData, CellData and FieldData
 
@@ -764,14 +785,14 @@ def resultStats(input, name: str, volume: float, verbose: bool = False) -> dict:
                         bounds = kdata["Bounds"]
                         if bounds[0][0] != bounds[0][1]:
                             if not "Stats" in kdata:
-                                print(f"\t{key}: create kdata[Stats]")
+                                # print(f"\t{key}: create kdata[Stats]")
                                 kdata["Stats"] = {}
 
                             kdata["Stats"] = getresultStats(
                                 input, name, key, AttributeMode
                             )
 
-                            if not key.endswith("norm"):
+                            if histo and not key.endswith("norm"):
                                 getresultHisto(
                                     input, name, volume, key, TypeMode, Components
                                 )
@@ -822,21 +843,11 @@ def getresultStats(
     #     for prop in export.ListProperties():
     #         print(f'ExportView: {prop}={export.GetPropertyValue(prop)}')
 
-    # # not working
-    export = CreateWriter(f"{name}-{key}-descriptivestats-create.csv", proxy=statistics)
-    export.FieldAssociation = "Row Data"
-    # get params list
-    if not printed:
-        for prop in export.ListProperties():
-            print(f"CreateWriter: {prop}={export.GetPropertyValue(prop)}")
-    export.UpdateVTKObjects()  # is it needed?
-    export.UpdatePipeline()
-
     Delete(descriptiveStatisticsDisplay)
-    Delete(statistics)
-    del statistics
     Delete(spreadSheetView)
     del spreadSheetView
+    Delete(statistics)
+    del statistics
 
     csv = createTable(f"{name}-{key}-descriptivestats.csv", key, name)
 
@@ -922,6 +933,9 @@ def getresultHisto(
 
     plotHisto(f"{name}-{key}-histogram.csv", name, key, volume)
 
+    # remove temporary csv files
+    os.remove(f"{name}-{key}-histogram.csv")
+
     if TypeMode == "POINT":
         Delete(pointDatatoCellData)
         del pointDatatoCellData
@@ -954,8 +968,13 @@ def load(file: str, printed: bool = True):
     return input
 
 
+# @profile
 def meshinfo(
-    input, ComputeStats: bool = True, verbose: bool = False, printed: bool = True
+    input,
+    ComputeStats: bool = True,
+    ComputeHisto: bool = False,
+    verbose: bool = False,
+    printed: bool = True,
 ) -> tuple:
     """
     display geometric info from input dataset
@@ -1198,7 +1217,156 @@ def meshinfo(
         stats = []
 
         print("Data ranges:", flush=True)
-        resultinfo(cellsize)
+        datadict = resultinfo(cellsize)
+
+        """
+        # To speed up Stats by blocks
+        # !!! add Standard Deviation form Mean and M2
+        print("Global Stats:", flush=True)
+
+        for datatype in datadict:
+            if datatype != "FieldData":
+                AttributeMode = datadict[datatype]["AttributeMode"]
+                TypeMode = datadict[datatype]["TypeMode"]
+        
+                statistics = DescriptiveStatistics(cellsize)
+                statistics.VariablesofInterest = [
+                    key for key in datadict["PointData"]["Arrays"] if not key in ignored_keys
+                ]
+                print(
+                f"statistics.VariablesofInterest={statistics.VariablesofInterest}",
+                    flush=True,
+                )
+                statistics.AttributeMode = AttributeMode
+                spreadSheetView = CreateView("SpreadSheetView")
+                descriptiveStatisticsDisplay = Show(
+                    statistics, spreadSheetView, "SpreadSheetRepresentation"
+                )
+                spreadSheetView.Update()
+                export = ExportView(
+                    f"total-descriptivestats-ttt.csv",
+                    view=spreadSheetView,
+                    RealNumberNotation="Scientific",
+                )
+                csv = pd.read_csv(f"total-descriptivestats-ttt.csv")
+                csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
+                csv = csv[(csv.BlockName != "Derived Statistics")]
+                dropped_keys = [
+                    "BlockName",
+                    "Cardinality",
+                    "Kurtosis",
+                    "Skewness",
+                    "Sum",
+                    "Variance",
+                ]
+                csv.drop(columns=dropped_keys, inplace=True)
+                # Reorder columns
+                csv = csv[
+                    [
+                        "Variable",
+                        "Minimum",
+                        "Mean",
+                        "Maximum",
+                        "Standard Deviation",
+                        "M2",
+                        "M3",
+                        "M4",
+                    ]
+                ]
+                print(f"total stats: key={list(csv.keys())}", flush=True)
+                print(
+                    tabulate(
+                        csv,
+                        headers="keys",
+                        tablefmt="psql", 
+                        showindex=False
+                    )
+                )
+                for i, block in enumerate(blockdata.keys()):
+                    name = blockdata[block]["name"]
+                    print(f"block[{i}]: extract {block}, name={name}", flush=True)
+                    descriptiveStatisticsDisplay.BlockVisibilities = [block]
+                    spreadSheetView.Update()
+                    export = ExportView(
+                        f"{name}-descriptivestats-ttt.csv",
+                        view=spreadSheetView,
+                        RealNumberNotation="Scientific",
+                    )
+                    csv = pd.read_csv(f"{name}-descriptivestats-ttt.csv")
+                    csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
+                    csv = csv[(csv.BlockName != "Derived Statistics")]
+                    dropped_keys = [
+                        "BlockName",
+                        "Cardinality",
+                        "Kurtosis",
+                        "Skewness",
+                        "Sum",
+                        "Variance",
+                    ]
+                    csv.drop(columns=dropped_keys, inplace=True)
+                    
+                    # Compute Standard Deviation
+                    csv['Standard Deviation'] = sqrt(abs(csv["Mean"]**2 - csv["M2"]))
+                    
+                    # Add Name 
+                    (nrows, ncols) = csv.shape
+                    csv['Name'] = [name for i in range(nrows)]
+
+                    # Reorder columns
+                    csv = csv[
+                        [
+                            "Variable",
+                            "Name",
+                            "Minimum",
+                            "Mean",
+                            "Maximum",
+                            "Standard Deviation",
+                            "M2",
+                            "M3",
+                            "M4",
+                        ]
+                    ]
+                    print(f"{name} stats: key={list(csv.keys())}", flush=True)
+                    print(
+                        tabulate(
+                            csv,
+                            headers="keys",
+                            tablefmt="psql", 
+                            showindex=False
+                        )
+                    )
+                
+                for key in statistics.VariablesofInterest:
+                    found = False
+                    (physic, fieldname) = key.split(".")
+                    for excluded in fieldunits[fieldname]["Exclude"]:
+                        if excluded in name:
+                            found = True
+                            print(f"ignore block: {name}", flush=True)
+                            break
+
+                    if not found:
+                        Components = kdata["Components"]
+                        bounds = kdata["Bounds"]
+                        if bounds[0][0] != bounds[0][1]:
+                            if not "Stats" in kdata:
+                                # print(f"\t{key}: create kdata[Stats]")
+                                kdata["Stats"] = {}
+
+                            kdata["Stats"] = csv.query()
+
+                    
+                
+                
+                Delete(descriptiveStatisticsDisplay)
+                Delete(spreadSheetView)
+                del spreadSheetView
+                Delete(statistics)
+                del statistics
+
+
+        exit(1)
+        """
 
         print("Data ranges without Air:", flush=True)
         extractBlock1 = ExtractBlock(registrationName="insert", Input=cellsize)
@@ -1209,11 +1377,18 @@ def meshinfo(
         volumes = [blockdata[block]["volume"] for block in extractBlock1.Selectors]
         mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
         mergeBlocks1.UpdatePipeline()
-        statsdict = resultStats(mergeBlocks1, "insert", sum(volumes))
+        statsdict = resultStats(
+            mergeBlocks1, "insert", sum(volumes), histo=ComputeHisto
+        )
+        print(f"insert statsdict={statsdict}")
         stats.append(statsdict)
         extractBlock1.UpdatePipeline()
         Delete(extractBlock1)
         del extractBlock1
+
+        # Force a garbage collection
+        collected = gc.collect()
+        print(f"Garbage collector: collected {collected} objects.")
 
         # aggregate stats data
         createStatsTable([statsdict], "insert")
@@ -1228,10 +1403,16 @@ def meshinfo(
             extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
             extractBlock1.Selectors = [block]
             extractBlock1.UpdatePipeline()
-            statsdict = resultStats(extractBlock1, name, blockdata[block]["volume"])
+            statsdict = resultStats(
+                extractBlock1, name, blockdata[block]["volume"], histo=ComputeHisto
+            )
             stats.append(statsdict)
             Delete(extractBlock1)
             del extractBlock1
+
+            # Force a garbage collection
+            collected = gc.collect()
+            print(f"Garbage collector: collected {collected} objects.")
 
             # aggregate stats data
             createStatsTable([statsdict], name)
@@ -1719,10 +1900,10 @@ def make3Dview(
         elevation=300,
     )
 
-    Delete(boxclip)
-    del boxclip
     Delete(renderView)
     del renderView
+    Delete(boxclip)
+    del boxclip
 
 
 #################################################################
@@ -1748,15 +1929,18 @@ def makeOxOyview(
     (physic, fieldname) = key.split(".")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
-    slice = makeplaneslice(input, f"OxOy-z={z}m", z=z)
+    r_units = {"coord": fieldunits["coord"]["Units"]}
+    mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+    z_mm = convert_data(r_units, z, "coord")
+    slice = makeplaneslice(input, f"OxOy-z={z_mm}{mm}", z=z)
     selectedblocks = selectBlocks(
         list(blockdata.keys()), fieldunits[fieldname]["Exclude"]
     )
     print(f"slice.Selectors = {selectedblocks}")
 
-    filename = f"{field}-OxOy-z={z}.png"
+    filename = f"{field}-OxOy-z={z_mm}{mm}.png"
     if suffix is not None:
-        filename = f"{field}-{suffix}-OxOy-z={z}.png"
+        filename = f"{field}-{suffix}-OxOy-z={z_mm}{mm}.png"
 
     # position is None
     renderView = displayField(
@@ -1770,7 +1954,7 @@ def makeOxOyview(
         focal=(0, 0, z),
         roll=0,
         polargrid=True,
-        comment=rf"z={z} m",
+        comment=rf"z={z_mm} {mm}",
     )
 
     """
@@ -1781,10 +1965,10 @@ def makeOxOyview(
     elevation=0,
     """
 
-    Delete(slice)
-    del slice
     Delete(renderView)
     del renderView
+    Delete(slice)
+    del slice
 
 
 #################################################################
@@ -1850,10 +2034,10 @@ def makeOrOzview(
     # elevation=270,
     # parallelProjection=False,
 
-    Delete(slice)
-    del slice
     Delete(renderView)
     del renderView
+    Delete(slice)
+    del slice
 
 
 #################################################################
@@ -1926,14 +2110,17 @@ def plotOr(
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: theta={theta} deg, z={z} ")
+        r_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        z_mm = convert_data(r_units, z, "coord")
+        plt.title(f"{key}: theta={theta} deg, z={z_mm} {mm}")
 
         if show:
             plt.show()
         else:
-            plt.savefig(f"{key}-vs-r-theta={theta}-z={z}.png", dpi=300)
+            plt.savefig(f"{key}-vs-r-theta={theta}-z={z_mm}{mm}.png", dpi=300)
         plt.close()
-        keycsv.to_csv(f"{key}-vs-r-theta={theta}-z={z}.csv")
+        keycsv.to_csv(f"{key}-vs-r-theta={theta}-z={z_mm}{mm}.csv")
         pass
 
     # requirements: create PointData from CellData
@@ -1946,6 +2133,12 @@ def plotOr(
             ax=None,
             show=show,
         )
+
+    # remove temporary csv files
+    os.remove(filename)
+
+    Delete(plotOverLine)
+    del plotOverLine
     pass
 
 
@@ -2014,14 +2207,17 @@ def plotOz(
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: theta={theta} deg, r={r} ")
+        r_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        r_mm = convert_data(r_units, r, "coord")
+        plt.title(f"{key}: theta={theta} deg, r={r_mm} {mm}")
 
         if show:
             plt.show()
         else:
-            plt.savefig(f"{key}-vs-z-theta={theta}-r={r}.png", dpi=300)
+            plt.savefig(f"{key}-vs-z-theta={theta}-r={r_mm}{mm}.png", dpi=300)
         plt.close()
-        keycsv.to_csv(f"{key}-vs-z-theta={theta}-r={r}.csv")
+        keycsv.to_csv(f"{key}-vs-z-theta={theta}-r={r_mm}{mm}.csv")
         pass
 
     # requirements: create PointData from CellData
@@ -2034,9 +2230,16 @@ def plotOz(
             ax=None,
             show=show,
         )
+
+    # remove temporary csv files
+    os.remove(filename)
+
+    Delete(plotOverLine)
+    del plotOverLine
     pass
 
 
+# @profile
 def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True):
     """
     for theta, need to apply CellDataToPointData filter
@@ -2134,7 +2337,11 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
 
         df = pd.concat(keycsv_dfs)
         df = df.sort_values(by="theta")
-        df.to_csv(f"{key}-vs-theta-r={r}-z={z}.csv")
+        r_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        r_mm = convert_data(r_units, r, "coord")
+        z_mm = convert_data(r_units, z, "coord")
+        df.to_csv(f"{key}-vs-theta-r={r_mm}{mm}-z={z_mm}{mm}.csv")
         # print(f"df keys: {df.columns.values.tolist()}")
         # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
         # print(f"df={df}")
@@ -2149,13 +2356,16 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
         plt.xlim(x0, x1)
 
         ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: r={r}, z={z}")
+        plt.title(f"{key}: r={r_mm} {mm}, z={z_mm} {mm}")
 
         if show:
             plt.show()
         else:
-            plt.savefig(f"{key}-vs-theta-r={r}-z={z}.png", dpi=300)
+            plt.savefig(f"{key}-vs-theta-r={r_mm}{mm}-z={z_mm}{mm}.png", dpi=300)
         plt.close()
+
+        print(f"{key} stats on r={r_mm}{mm}-z={z_mm}{mm}")
+        print(f"{df[key].describe()}")
         pass
 
     # requirements: create PointData from CellData
@@ -2173,16 +2383,35 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
             else:
                 plotThetaField(files, field, r, z, ax=None, show=show)
 
+    # remove temporary csv files
+    for file in files:
+        os.remove(file)
+
     Delete(cellDatatoPointData1)
     del cellDatatoPointData1
+
+    # Force a garbage collection
+    collected = gc.collect()
+    print(f"Garbage collector: collected {collected} objects.")
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("file", type=str, help="input case file (ex. Export.case)")
 parser.add_argument("--field", type=str, help="select field to display", default="")
 parser.add_argument("--stats", help="activate stats calculations", action="store_true")
-parser.add_argument("--r", nargs="*", type=float, help="select r to display")
-parser.add_argument("--z", nargs="*", type=float, help="select z to display")
+parser.add_argument(
+    "--histos", help="activate histograms calculations", action="store_true"
+)
+parser.add_argument("--plots", help="activate plots calculations", action="store_true")
+parser.add_argument("--views", help="activate views calculations", action="store_true")
+parser.add_argument(
+    "--channels", help="activate views calculations", action="store_true"
+)
+parser.add_argument("--r", nargs="*", type=float, help="select r in m to display")
+parser.add_argument(
+    "--theta", nargs="*", type=float, help="select theta in deg to display"
+)
+parser.add_argument("--z", nargs="*", type=float, help="select z in m to display")
 parser.add_argument(
     "--save",
     help="save graphs",
@@ -2230,7 +2459,9 @@ if args.field:
 
 
 # get Block info
-cellsize, blockdata, statsdict = meshinfo(reader, ComputeStats=args.stats)
+cellsize, blockdata, statsdict = meshinfo(
+    reader, ComputeStats=args.stats, ComputeHisto=args.histos
+)
 
 # create 3D view
 if not args.field:
@@ -2244,85 +2475,83 @@ if not args.field:
     color = ["POINTS", key]
     print(f"force field to {key}", flush=True)
 
-if args.z:
-    if args.r:
-        for z in args.z:
-            for r in args.r:
-                plotTheta(cellsize, r, z, show=(not args.save))
+# Plots
+if args.plots:
+    if args.z:
+        if args.r:
+            for z in args.z:
+                for r in args.r:
+                    plotTheta(cellsize, r, z, show=(not args.save))
+    # add plotOr
+    # add plotOz
 
-# deformed view
+# When dealing with elasticity
+suffix = ""
 datadict = resultinfo(cellsize)
 if "elasticity.displacement" in list(datadict["PointData"]["Arrays"].keys()):
     # make3Dview(cellsize, blockdata, key, color, addruler=True)
-    print("Save stl for original geometries:")
-    for i, block in enumerate(blockdata.keys()):
-        name = blockdata[block]["name"]
-        actual_name = name.replace("/root/", "")
-        print(f"\t{name}: actual_name={actual_name}", end="")
-        if not actual_name.endswith("Isolant"):
-            print(" saved", end="", flush=True)
-            extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
-            extractBlock1.Selectors = [block]
-            extractBlock1.UpdatePipeline()
-            extractSurface1 = ExtractSurface(
-                registrationName="ExtractSurface1", Input=extractBlock1
-            )
+    if args.channels:
+        print("Save stl for original geometries:")
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            print(f"\t{name}: actual_name={actual_name}", end="")
+            if not actual_name.endswith("Isolant") and not "Air" in actual_name:
+                print(" saved", end="", flush=True)
+                extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
 
-            print(f" file={cwd}/{actual_name}.stl", flush=True)
-            SaveData(f"{cwd}/{actual_name}.stl", proxy=extractSurface1)
-            Delete(extractBlock1)
-            del extractBlock1
-        else:
-            print(" ignored", flush=True)
+                print(f" file={cwd}/{actual_name}.stl", flush=True)
+                SaveData(f"{cwd}/{actual_name}.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
+            else:
+                print(" ignored", flush=True)
 
     geometry = deformed(cellsize, factor=1)
 
     # compute channel deformation
     # use MeshLib see test-meshlib example
-    print("Save stl for deformed geometries:")
-    for i, block in enumerate(blockdata.keys()):
-        name = blockdata[block]["name"]
-        actual_name = name.replace("/root/", "")
-        print(f"\t{name}: actual_name={actual_name}", end="")
-        if not actual_name.endswith("Isolant"):
-            print(" saved", flush=True)
-            extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
-            extractBlock1.Selectors = [block]
-            extractBlock1.UpdatePipeline()
-            extractSurface1 = ExtractSurface(
-                registrationName="ExtractSurface1", Input=extractBlock1
-            )
+    if args.channels:
+        print("Save stl for deformed geometries:")
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            print(f"\t{name}: actual_name={actual_name}", end="")
+            if not actual_name.endswith("Isolant") and not "Air" in actual_name:
+                print(" saved", flush=True)
+                extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
 
-            SaveData(f"{cwd}/{actual_name}-deformed.stl", proxy=extractSurface1)
-            Delete(extractBlock1)
-            del extractBlock1
-        else:
-            print(" ignored", flush=True)
+                SaveData(f"{cwd}/{actual_name}-deformed.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
+            else:
+                print(" ignored", flush=True)
 
+    suffix = "deformed"
+    cellsize = geometry
+
+# Views
+if args.views:
     print("Make 3D view with 1/4 cut out:")
-    make3Dview(geometry, blockdata, key, color, suffix="deformed", addruler=False)
+    make3Dview(cellsize, blockdata, key, color, suffix=suffix, addruler=False)
     if args.z:
         for z in args.z:
-            makeOxOyview(geometry, blockdata, key, color, z, suffix="deformed")
+            makeOxOyview(cellsize, blockdata, key, color, z, suffix=suffix)
 
-    print("Make 2D view for theta in range(0, 180, 30):")
-    for theta in range(0, 180, 30):
-        makeOrOzview(geometry, blockdata, key, color, theta, suffix="deformed")
-
-else:
-    print("Make 3D view with 1/4 cut out:")
-    make3Dview(cellsize, blockdata, key, color, addruler=False)
-    if args.z:
-        for z in args.z:
-            makeOxOyview(cellsize, blockdata, key, color, z)
-
-    print("Make 2D view for theta in range(0, 180, 30):")
-    for theta in range(0, 180, 30):
-        makeOrOzview(cellsize, blockdata, key, color, theta)
-
-    if args.z:
-        for z in args.z:
-            makeOxOyview(cellsize, blockdata, key, color, z)
+    if args.theta:
+        print("Make 2D view for theta in range(0, 180, 30):")
+        for theta in range(0, 180, 30):
+            makeOrOzview(cellsize, blockdata, key, color, theta, suffix=suffix)
 
 # for magnetfield:
 #   - view contour for magnetic potential (see pv-contours.py)
