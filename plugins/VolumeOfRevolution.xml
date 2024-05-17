@@ -1,0 +1,48 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="VolumeOfRevolution" class="vtkVolumeOfRevolutionFilter" label="Volume Of Revolution">
+      <Documentation long_help="Create point attribute array by projecting points onto an elevation vector." short_help="Create a point array representing elevation.">
+      </Documentation>
+
+      <InputProperty name="Input" command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkPolyData"/>
+        </DataTypeDomain>
+      </InputProperty>
+
+      <DoubleVectorProperty name="AxisDirection"
+                            command="SetAxisDirection"
+                            label="Axis Direction"
+                            number_of_elements="3"
+                            default_values="1.0 0.0 0.0">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="SweepAngle"
+                             command="SetSweepAngle"
+                             number_of_elements="1"
+                             label="Sweep Angle"
+                             default_values="360">
+      </DoubleVectorProperty>
+      
+
+      <DoubleVectorProperty name="AxisPosition"
+                            command="SetAxisPosition"
+                            label="Axis Position"
+                            number_of_elements="3"
+                            default_values="0.0 0.0 0.0">
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="Resolution"
+                            command="SetResolution"
+                            label="Resolution"
+                            number_of_elements="1"
+                            default_values="12">
+      </IntVectorProperty>
+
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>
