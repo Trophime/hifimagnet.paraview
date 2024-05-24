@@ -1,15 +1,17 @@
 import numpy as np
 import vtk
+import gc
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import hist
+from math import pi
 
 from tabulate import tabulate
 
 from paraview.simple import *
 from paraview.simple import (
     CellSize,
-    Clip,
-    Slice,
-    PlotOnIntersectionCurves,
-    Histogram,
+    CellCenters,
     DescriptiveStatistics,
     ExtractBlock,
     ExtractSurface,
@@ -21,6 +23,7 @@ from paraview.simple import (
     MergeBlocks,
     PlotOverLine,
     Text,
+    IntegrateVariables,
 )
 
 from paraview import servermanager as sm
@@ -451,13 +454,10 @@ def createTable(file: str, key: str, name: str):
 
 
 # plot with matplotlib
-def plotHisto(file, name: str, key: str, Area: float, show: bool = True):
-    import pandas as pd
-    import matplotlib.pyplot as plt
+def plotHistoAxi(file, name: str, key: str, BinCount: int, show: bool = True):
 
     ax = plt.gca()
     csv = pd.read_csv(file)
-    csv = csv[["bin_extents", "Area_total"]]
     keys = csv.columns.values.tolist()
     # print("histo before scaling")
     # print(tabulate(csv, headers="keys", tablefmt="psql"))
@@ -473,22 +473,17 @@ def plotHisto(file, name: str, key: str, Area: float, show: bool = True):
     # print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
 
     units = {fieldname: fieldunits[fieldname]["Units"]}
-    values = csv["bin_extents"].to_list()
+    values = csv[key].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv = csv.assign(bin_extents=[f"{val:.2f}" for val in out_values])
-    csv["Area_total"] = csv["Area_total"] / Area * 100
+    csv[field] = [f"{val:.2f}" for val in out_values]
 
-    csv.plot.bar(
-        x="bin_extents",
-        y="Area_total",
-        xlabel=rf"{msymbol}[{out_unit:~P}]",
-        ylabel="Fraction of total Area [%]",
-        title=f"{name}: {key}",
-        grid=True,
-        legend=False,
-        rot=45,
-        ax=ax,
-    )
+    hist(csv[key], bins=BinCount, weights=csv["AxiVol"], ax=ax, rot=45)
+
+    plt.xlabel(rf"{msymbol}[{out_unit:~P}]")
+    plt.ylabel("Fraction of total Area [%]")
+    plt.title(f"{name}: {key}")
+    plt.grid(True)
+    # plt.legend(False)
 
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
@@ -624,8 +619,59 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
 
     datadict = resultinfo(input, verbose)
     print(f"resultStats[{name}]: datadict={datadict}", flush=True)
+
+    # PointData to CellData
+    # Cellsize
+    # cellcenters
+    pointDatatoCellData = PointDatatoCellData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+
+    cellSize1 = CellSize(registrationName="CellSize1", Input=pointDatatoCellData)
+    # Properties modified on cellSize1 for 3D
+    cellSize1.ComputeVertexCount = 0
+    cellSize1.ComputeLength = 0
+    cellSize1.ComputeArea = 1  # for 2D
+    cellSize1.ComputeSum = 0
+    cellSize1.UpdatePipeline()
+    # print(f"cellSize1 CellData: {cellSize1.CellData[:]}")
+
+    cellCenters1 = CellCenters(registrationName="CellCenters1", Input=cellSize1)
+    # Properties modified on cellCenters1
+    cellCenters1.VertexCells = 1
+
+    # add moments for each scalar CellData
+    datadict = resultinfo(cellCenters1)
     for datatype in datadict:
-        if datatype != "FieldData":
+        if datatype == "CellData":
+            AttributeMode = datadict[datatype]["AttributeMode"]
+            TypeMode = datadict[datatype]["TypeMode"]
+            for key, kdata in datadict[datatype]["Arrays"].items():
+                if not key in ignored_keys:
+                    Components = kdata["Components"]
+                    bounds = kdata["Bounds"]
+                    if bounds[0][0] != bounds[0][1]:
+                        if Components == 1:
+                            tmp = cellCenters1
+                            for order in range(1, 5):
+                                cellCenters1 = momentN(
+                                    tmp, key, key, order, AttributeMode
+                                )
+
+    # compute integrals
+    integrateKeys(cellCenters1)
+
+    # reload csv
+    csv = pd.read_csv(f"{name}-integrals.csv")
+
+    # post-process csv: divide by Area from CellSize1
+    csv = csv / Area
+
+    # drop columns
+    # store res in same table as in resultstats (see getresultstats)
+
+    for datatype in datadict:
+        if datatype == "PointData":
             AttributeMode = datadict[datatype]["AttributeMode"]
             TypeMode = datadict[datatype]["TypeMode"]
             for key, kdata in datadict[datatype]["Arrays"].items():
@@ -636,7 +682,7 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
                         if not "Stats" in kdata:
                             kdata["Stats"] = {}
 
-                        kdata["Stats"] = getresultStats(input, name, key, AttributeMode)
+                        kdata["Stats"] = # pandas query from csv
                         """
                         print("resultStats:")
                         print(
@@ -647,9 +693,6 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
                             )
                         )
                         """
-
-                        if not key.endswith("norm"):
-                            getresultHisto(input, name, Area, key, TypeMode, Components)
 
     # display stats
     return datadict
@@ -723,35 +766,21 @@ def getresultStats(
     return csv
 
 
-def getresultHisto(
+def resultHistos(
     input,
     name: str,
     Area: float,
-    key: str,
-    TypeMode: str,
-    Components: int = 1,
     BinCount: int = 10,
     printed: bool = True,
 ):
     """
     histogram
     """
-    print(f"getresultHisto: name={name}, key={key}, TypeMode={TypeMode}", flush=True)
+    print(f"resultHistos: name={name}", flush=True)
 
-    # convert pointdata to celldata
-    if TypeMode == "POINT":
-        pointDatatoCellData = PointDatatoCellData(
-            registrationName="CellDatatoPointData", Input=input
-        )
-
-    elif TypeMode == "CELL":
-        pointDatatoCellData = input
-
-    else:
-        print(
-            'resultHisto: not applicable for {key["Name"]} - unsupported data type {key["Type"]}'
-        )
-        return
+    pointDatatoCellData = PointDatatoCellData(
+        registrationName="CellDatatoPointData", Input=input
+    )
 
     cellSize1 = CellSize(registrationName="CellSize1", Input=pointDatatoCellData)
     # Properties modified on cellSize1 for 3D
@@ -762,38 +791,60 @@ def getresultHisto(
     cellSize1.UpdatePipeline()
     # print(f"cellSize1 CellData: {cellSize1.CellData[:]}")
 
-    histogram1 = Histogram(registrationName="Histogram1", Input=cellSize1)
-    histogram1.SelectInputArray = ["CELLS", key]
-    # for scalar comment out Component
-    if Components > 1:
-        histogram1.Component = "Magnitude"
-    histogram1.CalculateAverages = 1
-    histogram1.CenterBinsAroundMinAndMax = 1
-    histogram1.BinCount = BinCount
-    if not printed:
-        # get params list
-        for prop in histogram1.ListProperties():
-            print(f"Histogram: {prop}={histogram1.GetPropertyValue(prop)}")
-    # TODO from key range
-    # histogram1.CustomBinRanges = [min, max]
+    cellCenters1 = CellCenters(registrationName="CellCenters1", Input=cellSize1)
+    # Properties modified on cellCenters1
+    cellCenters1.VertexCells = 1
 
-    # Properties modified on histogram1
-    histogram1.CalculateAverages = 1
+    spreadSheetView = CreateView("SpreadSheetView")
+    cellCenters1Display = Show(
+        cellCenters1, spreadSheetView, "SpreadSheetRepresentation"
+    )
+    spreadSheetView.Update()
+    ExportView(
+        f"{name}-Axi-cellcenters-all.csv",
+        view=spreadSheetView,
+        RealNumberNotation="Scientific",
+    )
 
-    export = CreateWriter(f"{name}-{key}-histogram.csv", proxy=histogram1)
-    if not printed:
-        for prop in export.ListProperties():
-            print(f"export: {prop}={export.GetPropertyValue(prop)}")
-    export.UpdateVTKObjects()  # is it needed?
-    export.UpdatePipeline()
-    Delete(histogram1)
-    del histogram1
+    csv = pd.read_csv("Axi-B-cellcenters.csv")
+    keys = csv.columns.values.tolist()
+    print(f"read_csv: csv={name}-Axi-B-cellcenters.csv, keys={keys}", flush=True)
 
-    plotHisto(f"{name}-{key}-histogram.csv", name, key, Area)
+    csv["AxiSurf"] = csv["Points_0"] * csv["Area"] * (2 * pi) / 1.0e-9
+    sum = csv["AxiSurf"].sum()
+    csv["AxiVol"] = csv["AxiSurf"] / sum
+    print(f"Sum(AxiSurf)={sum}")
+    print(f'Sum(AxiVol)={csv["AxiVol"].sum()}')
 
-    if TypeMode == "POINT":
-        Delete(pointDatatoCellData)
-        del pointDatatoCellData
+    datadict = resultinfo(cellCenters1)
+    for datatype in datadict:
+        if datatype == "CellData":
+            AttributeMode = datadict[datatype]["AttributeMode"]
+            TypeMode = datadict[datatype]["TypeMode"]
+            for key, kdata in datadict[datatype]["Arrays"].items():
+                if not key in ignored_keys:
+                    Components = kdata["Components"]
+                    bounds = kdata["Bounds"]
+                    if bounds[0][0] != bounds[0][1]:
+                        if Components == 1:
+                            plotHistoAxi(
+                                f"{name}-Axi-B-cellcenters.csv", name, key, BinCount
+                            )
+
+    Delete(cellCenters1Display)
+    Delete(spreadSheetView)
+    Delete(cellCenters1)
+    Delete(cellSize1)
+    del spreadSheetView
+    del cellCenters1
+    del cellSize1
+
+    Delete(pointDatatoCellData)
+    del pointDatatoCellData
+
+    # Force a garbage collection
+    collected = gc.collect()
+    print(f"Garbage collector: collected {collected} objects.")
 
 
 def getbounds(input):
@@ -821,6 +872,53 @@ def load(file: str, printed: bool = True):
             print(f"reader: {prop}={input.GetPropertyValue(prop)}")
 
     return input
+
+
+def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
+    """
+    compute moment of order N
+    """
+
+    calculator1 = Calculator(registrationName=f"moment{order}", Input=input)
+    calculator1.AttributeType = AttributeType  # 'Cell Data'
+    calculator1.ResultArrayName = f"{nkey}_moment{order}"
+
+    # check Points_0 for r
+    calculator1.Function = f'Points_0*{key}**{order}")'
+
+    calculator1.UpdatePipeline()
+    return calculator1
+
+
+def integrateKeys(input):
+    """
+    compute integral of Data over area/volume
+
+    to get values use a spreadsheet
+    """
+
+    integratevalues = IntegrateVariables(Input=input)
+
+    spreadSheetView = CreateView("SpreadSheetView")
+    descriptiveDisplay = Show(
+        integratevalues, spreadSheetView, "SpreadSheetRepresentation"
+    )
+    spreadSheetView.Update()
+    export = ExportView(
+        f"{name}-integrals.csv",
+        view=spreadSheetView,
+        RealNumberNotation="Scientific",
+    )
+
+    Delete(spreadSheetView)
+    del spreadSheetView
+    Delete(descriptiveDisplay)
+    Delete(integratevalues)
+    del integratevalues
+
+    # Force a garbage collection
+    collected = gc.collect()
+    print(f"Garbage collector: collected {collected} objects.")
 
 
 def meshinfo(
@@ -986,7 +1084,10 @@ def meshinfo(
         Areas = [blockdata[block]["Area"] for block in extractBlock1.Selectors]
         mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
         mergeBlocks1.UpdatePipeline()
+
         statsdict = resultStats(mergeBlocks1, "insert", sum(Areas))
+        resultHistos(mergeBlocks1, "insert", sum(Areas), BinCount=20)
+
         stats.append(statsdict)
         extractBlock1.UpdatePipeline()
         Delete(extractBlock1)
@@ -1006,6 +1107,8 @@ def meshinfo(
             extractBlock1.Selectors = [block]
             extractBlock1.UpdatePipeline()
             statsdict = resultStats(extractBlock1, name, blockdata[block]["Area"])
+            resultHistos(mergeBlocks1, name, blockdata[block]["Area"], BinCount=20)
+
             stats.append(statsdict)
             Delete(extractBlock1)
             del extractBlock1

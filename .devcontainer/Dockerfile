@@ -31,7 +31,7 @@ ARG USER_GID=$USER_UID
 
 # install Feelpp from BinTray Debian repository
 RUN apt update \
-    && apt install -y lsb-release wget curl sudo bash-completion \
+    && apt install -y lsb-release wget curl sudo bash-completion openssh-client git git-lfs \
     && lsb_release -cs
 
 # install paraview headless
