@@ -682,7 +682,7 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
                         if not "Stats" in kdata:
                             kdata["Stats"] = {}
 
-                        kdata["Stats"] = # pandas query from csv
+                        kdata["Stats"] = {} # pandas query from csv
                         """
                         print("resultStats:")
                         print(

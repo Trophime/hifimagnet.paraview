@@ -27,8 +27,13 @@ from paraview import servermanager as sm
 from paraview.vtk.numpy_interface import dataset_adapter as dsa
 from paraview.vtk.numpy_interface import algorithms as algs
 
+import pandas as pd
+
+pd.options.mode.copy_on_write = True
+
 import argparse
 import os
+import gc
 
 from pint import UnitRegistry, Unit, Quantity
 
@@ -46,19 +51,20 @@ ureg.autoconvert_offset_to_baseunit = True
 distance_unit = "millimeter"  # or "meter"
 
 # fieldunits: dict( Quantity: symbol: str, units: [ in_unit, out_unit ]
-# TODO
-# * use different symbol for Paraview, MatPlotlib not necessary the same
-#   unless latex is used for matplotlib
-#  !! watchout matplotlib setup for latex support and packages required !!!
-# * add an exclude list: list of blockname to be excluded
-# ex: for Temperature exclude=['Air'], J exclude=['Air', '*Isolant']
-# use regexp to select block to be be excluded
+# !!! watchout matplotlib setup for latex support and packages required !!!
 
 # build fieldunits when creating setup and store as a json
 # load json
 
 # use r"$\theta$" for displaying units in mathplotlib
 fieldunits = {
+    "coord": {
+        "Symbol": "r",
+        "Units": [
+            ureg.meter,
+            ureg.Unit(distance_unit),
+        ],
+    },
     "VolumicMass": {
         "Symbol": "rho",
         "mSymbol": r"$\rho$",
@@ -124,8 +130,12 @@ fieldunits = {
     },
     "Current": {"Symbol": "I", "Units": [ureg.ampere, ureg.ampere]},
     "Power": {"Symbol": "W", "Units": [ureg.watt, ureg.watt]},
-    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC]},
-    "electric_potential": {"Symbol": "V", "Units": [ureg.volt, ureg.volt]},
+    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC], "Exclude": ["Air"]},
+    "electric_potential": {
+        "Symbol": "V",
+        "Units": [ureg.volt, ureg.volt],
+        "Exclude": ["Air", "Isolant"],
+    },
     "current_density": {
         "Symbol": "J",
         "Units": [
@@ -214,6 +224,7 @@ fieldunits = {
     },
     "displacement_x": {
         "Symbol": "ux",
+        "mSymbol": r"$u_x$",
         "Units": [
             ureg.meter / ureg.second,
             ureg.Unit(distance_unit) / ureg.second,
@@ -222,6 +233,7 @@ fieldunits = {
     },
     "displacement_y": {
         "Symbol": "uy",
+        "mSymbol": r"$u_y$",
         "Units": [
             ureg.meter / ureg.second,
             ureg.Unit(distance_unit) / ureg.second,
@@ -230,6 +242,7 @@ fieldunits = {
     },
     "displacement_z": {
         "Symbol": "uz",
+        "mSymbol": r"$u_z$",
         "Units": [
             ureg.meter / ureg.second,
             ureg.Unit(distance_unit) / ureg.second,
@@ -327,6 +340,7 @@ ignored_keys = [
     "r",
     "Cos",
     "Sin",
+    "coord",
 ]
 
 
@@ -354,8 +368,7 @@ def convert_data(
     return data
 
 
-def createStatsTable(stats: list, name: str, verbose: bool = False):
-    import pandas as pd
+def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFrame:
 
     # TODO add a column with the Block Name
     # the column Block Name in cvs is not what I think
@@ -363,7 +376,7 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
     # remove "Derived Statistics" rows
     # why Standard Deviation and Variance are NaN??
     print(
-        f"createStatsTable: aggregate stats by datatype and field ({len(stats)}) items",
+        f"createStatsTable: name={name}, aggregate stats by datatype and field ({len(stats)}) items",
         flush=True,
     )
     _dataset = {
@@ -378,24 +391,12 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
             for key, kdata in statdict[datatype]["Arrays"].items():
                 # print(f"key={key} kdata={kdata.keys()}", flush=True)
                 if "Stats" in kdata:
-                    """
-                    print(
-                        tabulate(kdata["Stats"], headers="keys", tablefmt="psql"),
-                        flush=True,
-                    )
-                    """
-
                     if not key in _dataset[datatype]:
                         # print(f"create _dataset[{datatype}][{key}]")
                         _dataset[datatype][key] = []
 
                     # print(f"append kdata[Stats] to _dataset[{datatype}][{key}]")
                     _dataset[datatype][key].append(kdata["Stats"])
-                    """
-                    print(
-                        f"_dataset[{datatype}][{key}]: len() = {len(_dataset[datatype][key])}"
-                    )
-                    """
 
     # print("_dataset:", flush=True)
     dfs = []
@@ -407,69 +408,135 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
 
             (physic, fieldname) = key.split(".")
             units = {fieldname: fieldunits[fieldname]["Units"]}
+            # print(f"physic={physic}, fieldname={fieldname}", flush=True)
+            # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
+            symbol = fieldunits[fieldname]["Symbol"]
+            [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+            # print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
 
+            """
             # Exclude row with Name in fieldunits[fieldname]['Exclude']
             excludeblocks = fieldunits[fieldname]["Exclude"]
             found = False
             for block in excludeblocks:
                 if block in name:
                     found = True
+                    print(f"ignore block: {block}", flush=True)
                     break
+            """
 
             # for dset in _dataset[datatype][key]:
             #     print(tabulate(dset, headers="keys", tablefmt="psql"))
-            if not found:
-                df = pd.concat(_dataset[datatype][key])
-                print(
-                    f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:"
-                )
+            df = pd.concat(_dataset[datatype][key])
+            # print(f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:")
 
-                # Reorder columns
-                df = df[
-                    [
-                        "Variable",
-                        "Name",
-                        "Minimum",
-                        "Mean",
-                        "Maximum",
-                        "Standard Deviation",
-                        "M2",
-                        "M3",
-                        "M4",
-                        "Variance",
-                    ]
+            # Reorder columns
+            df = df[
+                [
+                    "Variable",
+                    "Name",
+                    "Minimum",
+                    "Mean",
+                    "Maximum",
+                    "Standard Deviation",
+                    "M2",
+                    "M3",
+                    "M4",
                 ]
-                # how to: rewrite tab contents using symbol and units
-                values = df["Variable"].to_list()
-                out_values = [rf"{fieldunits[fieldname]['Symbol']}" for value in values]
-                df = df.assign(Variable=out_values)
-                for column in ["Minimum", "Mean", "Maximum", "Standard Deviation"]:
-                    values = df[column].to_list()
-                    out_values = convert_data(units, values, fieldname)
-                    df = df.assign(column=[f"{val:.2f}" for val in out_values])
+            ]
 
-                # watch out:
-                # variance is square of (std)
-                # M2: moment of order 2 (square of mean)
-                # M3: moment of order 3 (cube of mean)
-                # M4: moment of order 4 (cube of mean)
+            # how to: rewrite tab contents using symbol and units
+            # see: https://github.com/pandas-dev/pandas/issues/29435
+            values = df["Variable"].to_list()
+            # print(f"values={values}", flush=True)
+            out_values = [value.replace(fieldname, rf"{symbol}") for value in values]
+            out_values = [rf"{value} [{out_unit:~P}]" for value in out_values]
+            df = df.assign(Variable=out_values)
+            # print(f"df[Variable]={df['Variable'].to_list()}", flush=True)
+            # print(f"out_values={out_values}", flush=True)
+            ndf = {}
+            for column in ["Minimum", "Mean", "Maximum", "Standard Deviation"]:
+                values = df[column].to_list()
+                # print(f"{column}:", flush=True)
+                # print(f"values={values}", flush=True)
+                out_values = convert_data(units, values, fieldname)
+                # print(f"out_values={out_values}", flush=True)
+                # print(
+                #     f"format out_values={[f'{val:.2f}' for val in out_values]}",
+                #     flush=True,
+                # )
+                ndf[column] = [f"{val:.3f}" for val in out_values]
+            # print(f'ndf={ndf}')
+            scaled_df = pd.DataFrame.from_dict(ndf)
+            for column in ["Minimum", "Mean", "Maximum", "Standard Deviation"]:
+                df[column] = scaled_df[column]
+                # print(f'df[{column}]={df[column].to_list()}', flush=True)
 
-                if verbose:
-                    print(
-                        tabulate(df, headers="keys", tablefmt="psql", showindex=False)
-                    )
-                df.to_csv(f"{key}-descriptivestats-create.csv")
-                dfs.append(df)
+            # watch out:
+            # M2: moment of order 2 (square of mean)
+            # M3: moment of order 3 (cube of mean)
+            # M4: moment of order 4 (cube of mean)
+            # print("change units for Moments")
+            ndf = {}
+            Munits = [in_unit, out_unit]
+            # print(f"units={units}, type={type(units)}", flush=True)
+            # print(f"Munits={Munits}, type={type(Munits)}", flush=True)
+            for column in ["M2", "M3", "M4"]:
+                # print(f"column={column}", flush=True)
+                values = df[column].to_list()
+                # print(f"values={values}", flush=True)
 
-    total_df = pd.concat(dfs)
-    print(tabulate(total_df, headers="keys", tablefmt="psql", showindex=False))
-    total_df.to_csv(f"{name}-descriptivestats-create.csv")
+                MomentUnits = {column: []}
+                for i, unit in enumerate(Munits):
+                    # print(f"i={i}", flush=True)
+                    unit_ = fieldunits[fieldname]["Units"][i]
+                    # print(f"units[{i}]={unit_}", flush=True)
+                    # print(f"Munits[{i}]={Munits[i]}", flush=True)
+                    MomentUnits[column].append(Munits[i] * unit_)
+                    # print(
+                    #     f"MomentUnits[{column}]={MomentUnits[column][-1]}",
+                    #     flush=True,
+                    # )
+                    Munits[i] = Munits[i] * unit_
+                # print(f"MomentUnits[{column}]={MomentUnits[column]}", flush=True)
 
-    pass
+                out_values = convert_data(MomentUnits, values, column)
+                ndf[column] = [f"{val:.3f}" for val in out_values]
+                del MomentUnits[column]
+
+            scaled_df = pd.DataFrame.from_dict(ndf)
+            for column in ["M2", "M3", "M4"]:
+                # print(f"df[{column}]={df[column].to_list()}", flush=True)
+                df[column] = scaled_df[column]
+                # print(f"scaled df[{column}]={df[column].to_list()}", flush=True)
+
+            if verbose:
+                print(
+                    tabulate(df, headers="keys", tablefmt="psql", showindex=False),
+                    flush=True,
+                )
+            df.to_csv(f"{key}-descriptivestats.csv")
+            dfs.append(df)
+
+    total_df = pd.DataFrame()
+    if dfs:
+        total_df = pd.concat(dfs)
+        print(
+            tabulate(total_df, headers="keys", tablefmt="psql", showindex=False),
+            flush=True,
+        )
+        total_df.to_csv(f"{name}-descriptivestats.csv")
+
+        # remove temporary csv files
+        for datatype in _dataset:
+            for key in _dataset[datatype]:
+                os.remove(f"{key}-descriptivestats.csv")
+                os.remove(f"{name}-{key}-descriptivestats.csv")
+
+    return total_df
 
 
 def createTable(file: str, key: str, name: str):
-    import pandas as pd
 
     csv = pd.read_csv(file)
     keys = csv.columns.values.tolist()
@@ -478,7 +545,7 @@ def createTable(file: str, key: str, name: str):
 
     # drop following keys
     csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
-    dropped_keys = ["Row ID", "Cardinality", "Kurtosis", "Skewness", "Sum"]
+    dropped_keys = ["Row ID", "Cardinality", "Kurtosis", "Skewness", "Sum", "Variance"]
     csv.drop(columns=dropped_keys, inplace=True)
 
     # print("createTable: post-process stats table", flush=True)
@@ -504,7 +571,6 @@ def createTable(file: str, key: str, name: str):
 
 # plot with matplotlib
 def plotHisto(file, name: str, key: str, Area: float, show: bool = True):
-    import pandas as pd
     import matplotlib.pyplot as plt
 
     ax = plt.gca()
@@ -561,7 +627,7 @@ def plotHisto(file, name: str, key: str, Area: float, show: bool = True):
         },
         inplace=True,
     )
-    print(tabulate(csv, headers="keys", tablefmt="psql", showindex=False))
+    print(tabulate(csv, headers="keys", tablefmt="psql", showindex=False), flush=True)
 
     # check that sum is roughtly equal to 1
     # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}')
@@ -570,6 +636,7 @@ def plotHisto(file, name: str, key: str, Area: float, show: bool = True):
     print(f"error={error}, check: {(abs(error) <= eps)}, eps={eps}", flush=True)
     assert error <= eps, "Check Sum(Fraction) failed"
 
+    csv.to_csv(f"{name}-{key}-histogram-matplotlib.csv")
     pass
 
 
@@ -612,11 +679,11 @@ def info(input):
     return dataInfo
 
 
-def resultinfo(input, verbose: bool = False):
+def resultinfo(input, verbose: bool = False) -> dict:
     """
     returns a dict gathering info on PointData, CellData and FieldData
     """
-    print("resultinfo:", flush=True)
+    print(f"resultinfo: input={input}", flush=True)
 
     datadict = {
         "PointData": {"TypeMode": "POINT", "AttributeMode": "Point Data", "Arrays": {}},
@@ -640,7 +707,7 @@ def resultinfo(input, verbose: bool = False):
     return datadict
 
 
-def getresultInfo(key, verbose: bool = False, printed: bool = True):
+def getresultInfo(key, verbose: bool = False, printed: bool = True) -> dict:
     """
     print info on key
 
@@ -662,12 +729,15 @@ def getresultInfo(key, verbose: bool = False, printed: bool = True):
         "Components": components,
         "Bounds": bounds,
     }
-    print(f"getresultInfo {name}: datadict={datadict}", flush=True)
+    if name not in ignored_keys:
+        print(f"getresultInfo {name}: datadict={datadict}", flush=True)
 
     return datadict
 
 
-def resultStats(input, name: str, Area: float, verbose: bool = False):
+def resultStats(
+    input, name: str, Area: float, histo: bool = False, verbose: bool = False
+) -> dict:
     """
     compute stats for PointData, CellData and FieldData
 
@@ -682,23 +752,26 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
             TypeMode = datadict[datatype]["TypeMode"]
             for key, kdata in datadict[datatype]["Arrays"].items():
                 if not key in ignored_keys:
-                    Components = kdata["Components"]
-                    bounds = kdata["Bounds"]
-                    if bounds[0][0] != bounds[0][1]:
-                        if not "Stats" in kdata:
-                            kdata["Stats"] = {}
 
-                        kdata["Stats"] = getresultStats(input, name, key, AttributeMode)
-                        """
-                        print("resultStats:")
-                        print(
-                            tabulate(
-                                kdata["Stats"],
-                                headers="keys",
-                                tablefmt="psql",
+                    found = False
+                    (physic, fieldname) = key.split(".")
+                    for excluded in fieldunits[fieldname]["Exclude"]:
+                        if excluded in name:
+                            found = True
+                            print(f"ignore block: {name}", flush=True)
+                            break
+
+                    if not found:
+                        Components = kdata["Components"]
+                        bounds = kdata["Bounds"]
+                        if bounds[0][0] != bounds[0][1]:
+                            if not "Stats" in kdata:
+                                # print(f"\t{key}: create kdata[Stats]")
+                                kdata["Stats"] = {}
+
+                            kdata["Stats"] = getresultStats(
+                                input, name, key, AttributeMode
                             )
-                        )
-                        """
 
                         if not key.endswith("norm"):
                             getresultHisto(input, name, Area, key, TypeMode, Components)
@@ -749,21 +822,11 @@ def getresultStats(
     #     for prop in export.ListProperties():
     #         print(f'ExportView: {prop}={export.GetPropertyValue(prop)}')
 
-    # # not working
-    export = CreateWriter(f"{name}-{key}-descriptivestats-create.csv", proxy=statistics)
-    export.FieldAssociation = "Row Data"
-    # get params list
-    if not printed:
-        for prop in export.ListProperties():
-            print(f"CreateWriter: {prop}={export.GetPropertyValue(prop)}")
-    export.UpdateVTKObjects()  # is it needed?
-    export.UpdatePipeline()
-
     Delete(descriptiveStatisticsDisplay)
-    Delete(statistics)
-    del statistics
     Delete(spreadSheetView)
     del spreadSheetView
+    Delete(statistics)
+    del statistics
 
     csv = createTable(f"{name}-{key}-descriptivestats.csv", key, name)
 
@@ -838,6 +901,9 @@ def getresultHisto(
 
     plotHisto(f"{name}-{key}-histogram.csv", name, key, Area)
 
+    # remove temporary csv files
+    os.remove(f"{name}-{key}-histogram.csv")
+
     if TypeMode == "POINT":
         Delete(pointDatatoCellData)
         del pointDatatoCellData
@@ -871,8 +937,12 @@ def load(file: str, printed: bool = True):
 
 
 def meshinfo(
-    input, ComputeStats: bool = True, verbose: bool = False, printed: bool = True
-):
+    input,
+    ComputeStats: bool = True,
+    ComputeHisto: bool = False,
+    verbose: bool = False,
+    printed: bool = True,
+) -> tuple:
     """
     display geometric info from input dataset
     """
@@ -1114,7 +1184,157 @@ def meshinfo(
         stats = []
 
         print("Data ranges:", flush=True)
-        resultinfo(cellsize, verbose)
+        datadict = resultinfo(cellsize)
+
+        """
+        # To speed up Stats by blocks
+        # !!! add Standard Deviation form Mean and M2 !!!
+        # this would replace also createStatsTable
+
+        print("Global Stats:", flush=True)
+
+        for datatype in datadict:
+            if datatype != "FieldData":
+                AttributeMode = datadict[datatype]["AttributeMode"]
+                TypeMode = datadict[datatype]["TypeMode"]
+        
+                statistics = DescriptiveStatistics(cellsize)
+                statistics.VariablesofInterest = [
+                    key for key in datadict["PointData"]["Arrays"] if not key in ignored_keys
+                ]
+                print(
+                f"statistics.VariablesofInterest={statistics.VariablesofInterest}",
+                    flush=True,
+                )
+                statistics.AttributeMode = AttributeMode
+                spreadSheetView = CreateView("SpreadSheetView")
+                descriptiveStatisticsDisplay = Show(
+                    statistics, spreadSheetView, "SpreadSheetRepresentation"
+                )
+                spreadSheetView.Update()
+                export = ExportView(
+                    f"total-descriptivestats-ttt.csv",
+                    view=spreadSheetView,
+                    RealNumberNotation="Scientific",
+                )
+                csv = pd.read_csv(f"total-descriptivestats-ttt.csv")
+                csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
+                csv = csv[(csv.BlockName != "Derived Statistics")]
+                dropped_keys = [
+                    "BlockName",
+                    "Cardinality",
+                    "Kurtosis",
+                    "Skewness",
+                    "Sum",
+                    "Variance",
+                ]
+                csv.drop(columns=dropped_keys, inplace=True)
+                
+                # Compute Standard Deviation
+                csv['Standard Deviation'] = sqrt(abs(csv["Mean"]**2 - csv["M2"]))
+                    
+                # Add Name 
+                (nrows, ncols) = csv.shape
+                csv['Name'] = [name for i in range(nrows)]
+
+                # Reorder columns
+                csv = csv[
+                    [
+                        "Variable",
+                        "Name",
+                        "Minimum",
+                        "Mean",
+                        "Maximum",
+                        "Standard Deviation",
+                        "M2",
+                        "M3",
+                        "M4",
+                    ]
+                ]
+                print(f"total stats: key={list(csv.keys())}", flush=True)
+                print(
+                    tabulate(
+                        csv,
+                        headers="keys",
+                        tablefmt="psql", 
+                        showindex=False
+                    )
+                )
+                    
+                # convert data to requested units, 
+                # add units for Variable
+                # set values with appropriate units
+
+                # per blocks
+                for i, block in enumerate(blockdata.keys()):
+                    name = blockdata[block]["name"]
+                    print(f"block[{i}]: extract {block}, name={name}", flush=True)
+                    descriptiveStatisticsDisplay.BlockVisibilities = [block]
+                    spreadSheetView.Update()
+                    export = ExportView(
+                        f"{name}-descriptivestats-ttt.csv",
+                        view=spreadSheetView,
+                        RealNumberNotation="Scientific",
+                    )
+                    csv = pd.read_csv(f"{name}-descriptivestats-ttt.csv")
+                    csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
+                    csv = csv[(csv.BlockName != "Derived Statistics")]
+                    dropped_keys = [
+                        "BlockName",
+                        "Cardinality",
+                        "Kurtosis",
+                        "Skewness",
+                        "Sum",
+                        "Variance",
+                    ]
+                    csv.drop(columns=dropped_keys, inplace=True)
+                    
+                    # Compute Standard Deviation
+                    csv['Standard Deviation'] = sqrt(abs(csv["Mean"]**2 - csv["M2"]))
+                    
+                    # Add Name 
+                    (nrows, ncols) = csv.shape
+                    csv['Name'] = [name for i in range(nrows)]
+
+                    # Reorder columns
+                    csv = csv[
+                        [
+                            "Variable",
+                            "Name",
+                            "Minimum",
+                            "Mean",
+                            "Maximum",
+                            "Standard Deviation",
+                            "M2",
+                            "M3",
+                            "M4",
+                        ]
+                    ]
+                    print(f"{name} stats: key={list(csv.keys())}", flush=True)
+                    print(
+                        tabulate(
+                            csv,
+                            headers="keys",
+                            tablefmt="psql", 
+                            showindex=False
+                        )
+                    )
+                
+                    # convert data to requested units, 
+                    # add units for Variable
+                    # set values with appropriate units
+
+                Delete(descriptiveStatisticsDisplay)
+                Delete(spreadSheetView)
+                del spreadSheetView
+                Delete(statistics)
+                del statistics
+
+        # concat csv per datatype
+                
+
+        exit(1)
+        """
 
         print("Data ranges without Air:", flush=True)
         extractBlock1 = ExtractBlock(registrationName="insert", Input=cellsize)
@@ -1125,11 +1345,16 @@ def meshinfo(
         Areas = [blockdata[block]["Area"] for block in extractBlock1.Selectors]
         mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
         mergeBlocks1.UpdatePipeline()
-        statsdict = resultStats(mergeBlocks1, "insert", sum(Areas))
+        statsdict = resultStats(mergeBlocks1, "insert", sum(Areas), histo=ComputeHisto)
+        print(f"insert statsdict={statsdict}")
         stats.append(statsdict)
         extractBlock1.UpdatePipeline()
         Delete(extractBlock1)
         del extractBlock1
+
+        # Force a garbage collection
+        collected = gc.collect()
+        print(f"Garbage collector: collected {collected} objects.")
 
         # aggregate stats data
         createStatsTable([statsdict], "insert")
@@ -1144,18 +1369,24 @@ def meshinfo(
             extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
             extractBlock1.Selectors = [block]
             extractBlock1.UpdatePipeline()
-            statsdict = resultStats(extractBlock1, name, blockdata[block]["Area"])
+            statsdict = resultStats(
+                extractBlock1, name, blockdata[block]["Area"], histo=ComputeHisto
+            )
             stats.append(statsdict)
             Delete(extractBlock1)
             del extractBlock1
 
-            # for testing purpose only
-            # if i == 1:
-            #     break
+            # Force a garbage collection
+            collected = gc.collect()
+            print(f"Garbage collector: collected {collected} objects.")
 
-        createStatsTable(stats, name)
+            # aggregate stats data
+            createStatsTable([statsdict], name)
 
-    return cellsize, blockdata
+        # # aggregate stats data
+        # createStatsTable(stats, "total")
+
+    return cellsize, blockdata, dict()
 
 
 def deformed(input, factor: float = 1, printed: bool = True):
@@ -1314,70 +1545,6 @@ def makesphereslice(
 
 
 ################################################################
-def setCamera(
-    renderView,
-    Up: tuple = None,
-    Angle: float = 30,
-    pProjection: bool = True,
-    roll: float = 0,
-    elevation: float = 0,
-    azimuth: float = 0,
-):
-    """
-    adapt camera settings
-
-    ref:
-    https://docs.paraview.org/en/latest/ReferenceManual/customizingParaView.html#camera-settings
-    https://docs.paraview.org/en/latest/Tutorials/ClassroomTutorials/pythonAndBatchParaViewAndPython.html#control-the-camera
-    """
-
-    renderView.ResetCamera()
-    camera = renderView.GetActiveCamera()
-
-    if Up is not None:
-        # Set
-        position = camera.GetPosition()
-        focalPoint = camera.GetFocalPoint()
-        viewDir = (
-            position[0] - focalPoint[0],
-            position[1] - focalPoint[1],
-            position[2] - focalPoint[2],
-        )
-        print(
-            f"Reset view: viewDir={viewDir}, viewUp={Up}, viewAngle={Angle}", flush=True
-        )
-        camera.SetViewUp(Up[0], Up[1], Up[2])
-        camera.SetViewAngle(Angle)
-        camera.SetParallelProjection(pProjection)
-        if pProjection:
-            camera.SetParallelScale(1)
-
-        print(f"Adjust Camera: Roll={roll}, Elevation={elevation}", flush=True)
-        camera.Roll(roll)  # rotate around ??
-        # camera.Yaw(45)   # rotate around ??
-        # camera.Pitch(45) # rotate around ??
-        # camera.Azimuth(45) # rotate around viewUp?
-        camera.Elevation(elevation)  # rotate around perpendicular viewUp x Oz?
-
-    else:
-        camera.OrthogonalizeViewUp()
-        camera.Azimuth(azimuth)
-
-    renderView.Update()
-    camera = renderView.GetActiveCamera()
-    position = camera.GetPosition()
-    focalPoint = camera.GetFocalPoint()
-    viewUp = camera.GetViewUp()
-    viewAngle = camera.GetViewAngle()
-    parallelProjection = camera.GetParallelProjection()
-    print(f"position: {position}", flush=True)
-    print(f"focalPoint: {focalPoint}", flush=True)
-    print(f"viewUp: {viewUp}", flush=True)
-    print(f"viewAngle: {viewAngle}", flush=True)
-    print(f"parallelProjection: {parallelProjection}", flush=True)
-    print(f"Roll: {camera.GetRoll()}", flush=True)
-
-    # print(f"help={dir(camera)}")
 
 
 def displayField(
@@ -1388,27 +1555,12 @@ def displayField(
     addruler: bool = True,
     renderView=None,
     filename: str = None,
-    viewUp: tuple = None,
-    viewAngle: float = 30,
-    parallelProjection: bool = False,
-    roll: float = 0,
-    elevation: float = 0,
-    azimuth: float = 0,
     comment: str = None,
-    grid: bool = False,
     polargrid: bool = False,
     printed: bool = True,
 ):
     """
     display field in renderview
-
-    Azimuth - rotate around the vertical axis.
-    Elevation - rotate around the horizontal axis in the plane of the screen.
-    Roll - rotate around the axis coming out of the screen.
-    View angle - basically a zoom in.
-    Camera position - where the camera is.
-    Focal point - where the camera is looking.
-    View Up - I don't know what this is (default = (0, 1, 0) for 3D, view from +Oz)
 
     TODO: eventually add an annotation
     """
@@ -1434,8 +1586,6 @@ def displayField(
     # TODO if args.field is not Magnetic something
     display.BlockSelectors = selectedblocks
     display.ColorArrayName = color
-    if grid:
-        display.DataAxesGrid.GridAxesVisibility = 1
     if polargrid:
         display.PolarAxes.Visibility = 1
         display.PolarAxes.MaximumAngle = 360.0
@@ -1452,10 +1602,6 @@ def displayField(
             for prop in ruler.ListProperties():
                 print(f"ruler: {prop}={ruler.GetPropertyValue(prop)}")
         Show(ruler, renderView)  # Reset Camera
-
-    setCamera(
-        renderView, viewUp, viewAngle, parallelProjection, roll, elevation, azimuth
-    )  # adjustCamera)
 
     resolution = [1200, 1200]
     renderView.ViewSize = resolution
@@ -1565,11 +1711,10 @@ def make2Dview(
     (physic, fieldname) = key.split(".")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
-    boxclip = makeboxclip(input, "boxclip")
     selectedblocks = selectBlocks(
         list(blockdata.keys()), fieldunits[fieldname]["Exclude"]
     )
-    print(f"boxclip.Selectors = {selectedblocks}", flush=True)
+    print(f"input.Selectors = {selectedblocks}", flush=True)
 
     filename = f"{field}.png"
     if suffix is not None:
@@ -1592,7 +1737,6 @@ def plotOr(
     input,
     r: list[float],
     theta: float,
-    z: float,
     show: bool = True,
     printed: bool = True,
 ):
@@ -1604,10 +1748,10 @@ def plotOr(
     plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
 
     # init the 'Line' selected for 'Source'
-    plotOverLine.Source.Point1 = [r0 * cos(radian), r0 * sin(radian), z]
-    plotOverLine.Source.Point2 = [r1 * cos(radian), r1 * sin(radian), z]
+    plotOverLine.Source.Point1 = [r0 * cos(radian), r0 * sin(radian), 0]
+    plotOverLine.Source.Point2 = [r1 * cos(radian), r1 * sin(radian), 0]
 
-    filename = f"r0={r0}m-r1={r1}m-theta={theta}deg-z={z}m.csv"
+    filename = f"r0={r0}m-r1={r1}m-theta={theta}deg.csv"
     export = CreateWriter(filename, proxy=plotOverLine)
     if not printed:
         for prop in export.ListProperties():
@@ -1616,18 +1760,20 @@ def plotOr(
     export.UpdatePipeline()
 
     # plot with matplotlib
-    def plotOrField(file, key: str, theta: float, z: float, ax=None, show: bool = True):
-        import pandas as pd
+    def plotOrField(file, key: str, theta: float, ax=None, show: bool = True):
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
         (physic, fieldname) = key.split(".")
-        print(f"physic={physic}, fieldname={fieldname}", flush=True)
-        print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
+        # print(f"physic={physic}, fieldname={fieldname}", flush=True)
+        # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
         symbol = fieldunits[fieldname]["Symbol"]
+        msymbol = symbol
+        if "mSymbol" in fieldunits[fieldname]:
+            msymbol = fieldunits[fieldname]["mSymbol"]
         [in_unit, out_unit] = fieldunits[fieldname]["Units"]
-        print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
+        # print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
 
         if ax is None:
             ax = plt.gca()
@@ -1638,27 +1784,30 @@ def plotOr(
 
         # rename columns
         keycsv.rename(columns={"arc_length": "r"}, inplace=True)
-        print(f"new keys: {keycsv.columns.values.tolist()}")
+        # print(f"new keys: {keycsv.columns.values.tolist()}")
 
         # rescale columns to plot
         units = {fieldname: fieldunits[fieldname]["Units"]}
         values = keycsv[key].to_list()
         out_values = convert_data(units, values, fieldname)
-        keycsv = keycsv.assign(key=[f"{val:.2f}" for val in out_values])
+        ndf = {key: [val for val in out_values]}
 
+        keycsv[key] = ndf[key]
         keycsv.plot(x="r", y=key, marker="o", grid=True, ax=ax)
 
         plt.xlabel("r [m]")
-        plt.ylabel(rf"{symbol} [{out_unit:~P}]")
+        plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: theta={theta} deg, z={z} ")
+        plt.title(f"{key}: theta={theta} deg")
 
         if show:
             plt.show()
         else:
-            plt.savefig(f"{key}-vs-r-theta={theta}-z={z}.png", dpi=300)
+            plt.savefig(f"{key}-vs-r-theta={theta}deg.png", dpi=300)
         plt.close()
+        keycsv.to_csv(f"{key}-vs-r-theta={theta}deg.csv")
+        pass
 
     # requirements: create PointData from CellData
     for field in input.PointData:
@@ -1666,102 +1815,24 @@ def plotOr(
             filename,
             field,
             theta,
-            z,
             ax=None,
             show=show,
         )
+
+    # remove temporary csv files
+    os.remove(filename)
+
+    Delete(plotOverLine)
+    del plotOverLine
     pass
 
 
-def plotOz(
-    input,
-    r: float,
-    theta: float,
-    z: list[float],
-    show: bool = True,
-    printed: bool = True,
-):
-
-    from math import pi, cos, sin
-
-    [z0, z1] = z
-    radian = theta * pi / 180.0
-
-    plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
-
-    # init the 'Line' selected for 'Source'
-    plotOverLine.Source.Point1 = [r * cos(radian), r * sin(radian), z0]
-    plotOverLine.Source.Point2 = [r * cos(radian), r * sin(radian), z1]
-
-    filename = f"r={r}m-theta={theta}deg-z0={z0}m-z1={z1}m.csv"
-    export = CreateWriter(filename, proxy=plotOverLine)
-    if not printed:
-        for prop in export.ListProperties():
-            print(f"export: {prop}={export.GetPropertyValue(prop)}")
-    export.UpdateVTKObjects()  # is it needed?
-    export.UpdatePipeline()
-
-    # plot with matplotlib
-    def plotOzField(file, key: str, theta: float, z: float, ax=None, show: bool = True):
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        from matplotlib.ticker import MaxNLocator
-
-        print(f"plotOrField: file={file}, key={key}", flush=True)
-        (physic, fieldname) = key.split(".")
-        symbol = fieldunits[fieldname]["Symbol"]
-        [in_unit, out_unit] = fieldunits[fieldname]["Units"]
-
-        if ax is None:
-            ax = plt.gca()
-
-        # see vonmises-vs-theta.py and/or vonmises-vs-theta-plot-savedata.py
-        csv = pd.read_csv(file)
-        keycsv = csv[["arc_length", key]]
-
-        # rename columns
-        keycsv.rename(columns={"arc_length": "z"}, inplace=True)
-        print(f"new keys: {keycsv.columns.values.tolist()}")
-
-        # rescale columns to plot
-        units = {fieldname: fieldunits[fieldname]["Units"]}
-        values = keycsv[key].to_list()
-        out_values = convert_data(units, values, fieldname)
-        keycsv = keycsv.assign(key=[f"{val:.2f}" for val in out_values])
-
-        keycsv.plot(x="z", y=key, marker="o", grid=True, ax=ax)
-
-        plt.xlabel("z [m]")
-        plt.ylabel(rf"{symbol} [{out_unit:~P}]")
-
-        # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: theta={theta} deg, r={r} ")
-
-        if show:
-            plt.show()
-        else:
-            plt.savefig(f"{key}-vs-z-theta={theta}-r={r}.png", dpi=300)
-        plt.close()
-
-    # requirements: create PointData from CellData
-    for field in input.PointData:
-        plotOzField(
-            filename,
-            field,
-            r,
-            theta,
-            ax=None,
-            show=show,
-        )
-    pass
-
-
-def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True):
+def plotTheta(input, r: float, show: bool = True, printed: bool = True):
     """
     for theta, need to apply CellDataToPointData filter
     """
 
-    print(f"plotTheta: r={r}, z={z}")
+    print(f"plotTheta: r={r}")
     cellDatatoPointData1 = CellDatatoPointData(
         registrationName="CellDatatoPointData", Input=input
     )
@@ -1788,41 +1859,44 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
 
         plotOnIntersectionCurve.SliceType = "Plane"
         # Properties modified on plotOnIntersectionCurves1.SliceType
-        plotOnIntersectionCurve.SliceType.Origin = [0.0, 0.0, z]
+        plotOnIntersectionCurve.SliceType.Origin = [0.0, 0.0, 0]
         plotOnIntersectionCurve.SliceType.Normal = [0.0, 0.0, 1.0]
 
         # plotOnIntersectionCurves.append(plotOnIntersectionCurve)
-        export = CreateWriter(f"r={r}m-z={z}m-{i}.csv", proxy=plotOnIntersectionCurve)
+        export = CreateWriter(f"r={r}m-{i}.csv", proxy=plotOnIntersectionCurve)
         if not printed:
             for prop in export.ListProperties():
                 print(f"export: {prop}={export.GetPropertyValue(prop)}")
         export.UpdateVTKObjects()  # is it needed?
         export.UpdatePipeline()
-        files.append(f"r={r}m-z={z}m-{i}.csv")
+        files.append(f"r={r}m-{i}.csv")
 
     # plot with matplotlib
-    def plotThetaField(files, key: str, r: float, z: float, ax=None, show: bool = True):
-        import pandas as pd
+    def plotThetaField(files, key: str, r: float, ax=None, show: bool = True):
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
         from numpy import pi, arctan2
 
-        print(f"plotThetaField: files={files}, key={key}", flush=True)
+        print(f"plotThetaField: files={files}, key={key}, show={show}", flush=True)
         (physic, fieldname) = key.split(".")
         symbol = fieldunits[fieldname]["Symbol"]
+        msymbol = symbol
+        if "mSymbol" in fieldunits[fieldname]:
+            msymbol = fieldunits[fieldname]["mSymbol"]
         [in_unit, out_unit] = fieldunits[fieldname]["Units"]
 
         if ax is None:
             ax = plt.gca()
 
         # see vonmises-vs-theta.py and/or vonmises-vs-theta-plot-savedata.py
+        keycsv_dfs = []
         for file in files:
             csv = pd.read_csv(file)
             keycsv = csv[["Points:0", "Points:1", "arc_length", key]]
 
             # rename columns
             keycsv.rename(columns={"Points:0": "x", "Points:1": "y"}, inplace=True)
-            print(f"new keys: {keycsv.columns.values.tolist()}")
+            # print(f"new keys: {keycsv.columns.values.tolist()}")
 
             # rescale columns to plot
             theta = arctan2(keycsv["y"].to_numpy(), keycsv["x"].to_numpy()) * 180 / pi
@@ -1834,19 +1908,33 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
 
             # Sort the rows of dataframe by 'Name' column
             keycsv = keycsv.sort_values(by="theta")
-            # drop last line
-            print(f"drop first line from {file}", flush=True)
-            keycsv.drop(index=keycsv.index[-1], axis=0, inplace=True)
+            # # drop last line
+            # print(f"drop first line from {file}", flush=True)
+            # keycsv.drop(index=keycsv.index[-1], axis=0, inplace=True)
 
             units = {fieldname: fieldunits[fieldname]["Units"]}
             values = keycsv[key].to_list()
             out_values = convert_data(units, values, fieldname)
-            keycsv = keycsv.assign(key=[f"{val:.2f}" for val in out_values])
+            ndf = {key: [val for val in out_values]}
 
-            keycsv.plot(x="theta", y=key, marker="o", grid=True, ax=ax)
+            keycsv[key] = ndf[key]
+            keycsv_dfs.append(keycsv)
 
-        plt.xlabel("theta [deg]")
-        plt.ylabel(rf"{symbol} [{out_unit:~P}]")
+            del ndf
+
+        df = pd.concat(keycsv_dfs)
+        df = df.sort_values(by="theta")
+        r_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        r_mm = convert_data(r_units, r, "coord")
+        df.to_csv(f"{key}-vs-theta-r={r_mm}{mm}.csv")
+        # print(f"df keys: {df.columns.values.tolist()}")
+        # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
+        # print(f"df={df}")
+        df.plot(x="theta", y=key, marker="o", grid=True, ax=ax)
+
+        plt.xlabel(r"$\theta$ [deg]")
+        plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
 
         # x range
         x0 = -180
@@ -1854,26 +1942,61 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
         plt.xlim(x0, x1)
 
         ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: r={r}, z={z}")
+        plt.title(f"{key}: r={r_mm} {mm}")
 
         if show:
             plt.show()
         else:
-            plt.savefig(f"{key}-vs-theta-r={r}-z={z}.png", dpi=300)
+            plt.savefig(f"{key}-vs-theta-r={r_mm}{mm}.png", dpi=300)
         plt.close()
 
+        print(f"{key} stats on r={r_mm}{mm}")
+        print(f"{df[key].describe()}")
+        pass
+
     # requirements: create PointData from CellData
-    for field in input.PointData:
-        if field.Name not in ignored_keys:
-            plotThetaField(files, field, r, z, ax=None, show=show)
+    datadict = resultinfo(cellDatatoPointData1)
+    for field in datadict["PointData"]["Arrays"]:
+        if not field in ignored_keys:
+            kdata = datadict["PointData"]["Arrays"][field]
+            Components = kdata["Components"]
+            print(f"plotThetaField for {field} - components={Components}")
+            if Components > 1:
+                for i in range(Components):
+                    print(f"plotThetaField for {field}:{i} skipped")
+                # for i in range(Components):
+                #     plotThetaField(files, f"{field}:{i}", r, z, ax=None, show=show)
+            else:
+                plotThetaField(files, field, r, ax=None, show=show)
+
+    # remove temporary csv files
+    for file in files:
+        os.remove(file)
+
+    Delete(cellDatatoPointData1)
+    del cellDatatoPointData1
+
+    # Force a garbage collection
+    collected = gc.collect()
+    print(f"Garbage collector: collected {collected} objects.")
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("file", type=str, help="input case file (ex. Export.case)")
 parser.add_argument("--field", type=str, help="select field to display", default="")
 parser.add_argument("--stats", help="activate stats calculations", action="store_true")
-parser.add_argument("--r", nargs="*", type=float, help="select r to display")
-parser.add_argument("--z", nargs="*", type=float, help="select z to display")
+parser.add_argument(
+    "--histos", help="activate histograms calculations", action="store_true"
+)
+parser.add_argument("--plots", help="activate plots calculations", action="store_true")
+parser.add_argument("--views", help="activate views calculations", action="store_true")
+parser.add_argument(
+    "--channels", help="activate views calculations", action="store_true"
+)
+parser.add_argument("--r", nargs="*", type=float, help="select r in m to display")
+parser.add_argument(
+    "--theta", nargs="*", type=float, help="select theta in deg to display"
+)
 parser.add_argument(
     "--save",
     help="save graphs",
@@ -1890,12 +2013,16 @@ parser.add_argument(
 args = parser.parse_args()
 print(f"args: {args}")
 
+# get current working directory
+cwd = os.getcwd()
+
 # check paraview version
 version = GetParaViewVersion()
 print(f"Paraview version: {version}")
 
 # args.file = "../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case"
 reader = load(args.file)
+# print(f"help(reader) = {dir(reader)}")
 bounds = getbounds(reader)
 print(f"bounds={bounds}")  # , type={type(bounds)}")
 info(reader)
@@ -1917,7 +2044,9 @@ if args.field:
 
 
 # get Block info
-cellsize, blockdata, statsdict = meshinfo(reader, ComputeStats=args.stats)
+cellsize, blockdata, statsdict = meshinfo(
+    reader, ComputeStats=args.stats, ComputeHisto=args.histos
+)
 
 # create 2D view
 if not args.field:
@@ -1931,36 +2060,75 @@ if not args.field:
     color = ["POINTS", key]
     print(f"force field to {key}", flush=True)
 
-# make3Dview(cellsize, blockdata, key, color, addruler=True)
-
-if args.z:
+# Plots
+if args.plots:
     if args.r:
-        for z in args.z:
-            for r in args.r:
-                plotTheta(cellsize, r, z, show=(not args.save))
+        for r in args.r:
+            plotTheta(cellsize, r, show=(not args.save))
+            for theta in args.theta:
+                plotOr(cellsize, r, theta, show=(not args.save))
+    # add plotOr
+    # add plotOz
 
-# deformed view
-geometry = deformed(cellsize, factor=1)
+# When dealing with elasticity
+suffix = ""
+datadict = resultinfo(cellsize)
+if "elasticity.displacement" in list(datadict["PointData"]["Arrays"].keys()):
+    # make3Dview(cellsize, blockdata, key, color, addruler=True)
+    if args.channels:
+        print("Save stl for original geometries:")
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            print(f"\t{name}: actual_name={actual_name}", end="")
+            if not actual_name.endswith("Isolant") and not "Air" in actual_name:
+                print(" saved", end="", flush=True)
+                extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
 
-# compute channel deformation
-# use MeshLib see test-meshlib example
-for i, block in enumerate(blockdata.keys()):
-    name = blockdata[block]["name"]
-    actual_name = name.replace("/root/", "")
-    if actual_name.startswith("H") and not actual_name.endswith("Isolant"):
-        extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
-        extractBlock1.Selectors = [block]
-        extractBlock1.UpdatePipeline()
-        extractSurface1 = ExtractSurface(
-            registrationName="ExtractSurface1", Input=extractBlock1
-        )
+                print(f" file={cwd}/{actual_name}.stl", flush=True)
+                SaveData(f"{cwd}/{actual_name}.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
+            else:
+                print(" ignored", flush=True)
 
-        SaveData(f"{actual_name}-deformed.stl", proxy=extractSurface1)
-        Delete(extractBlock1)
-        del extractBlock1
+    geometry = deformed(cellsize, factor=1)
 
+    # compute channel deformation
+    # use MeshLib see test-meshlib example
+    if args.channels:
+        print("Save stl for deformed geometries:")
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            print(f"\t{name}: actual_name={actual_name}", end="")
+            if not actual_name.endswith("Isolant") and not "Air" in actual_name:
+                print(" saved", flush=True)
+                extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
 
-make2Dview(geometry, blockdata, key, color, suffix="deformed", addruler=False)
+                SaveData(f"{cwd}/{actual_name}-deformed.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
+            else:
+                print(" ignored", flush=True)
+
+    suffix = "deformed"
+    cellsize = geometry
+
+# Views
+if args.views:
+    print("Make 2D view:")
+    make2Dview(geometry, blockdata, key, color, suffix=suffix, addruler=False)
 
 # for magnetfield:
 #   - view contour for magnetic potential (see pv-contours.py)
