@@ -130,13 +130,21 @@ fieldunits = {
     },
     "Current": {"Symbol": "I", "Units": [ureg.ampere, ureg.ampere]},
     "Power": {"Symbol": "W", "Units": [ureg.watt, ureg.watt]},
-    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC], "Exclude": ["Air"]},
+    "temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC], "Exclude": ["Air"]},
     "electric_potential": {
         "Symbol": "V",
         "Units": [ureg.volt, ureg.volt],
         "Exclude": ["Air", "Isolant"],
     },
     "current_density": {
+        "Symbol": "J",
+        "Units": [
+            ureg.ampere / ureg.meter**2,
+            ureg.ampere / ureg.Unit(distance_unit) ** 2,
+        ],
+        "Exclude": ["Air", "Isolant"],
+    },
+    "current_densitynorm": {
         "Symbol": "J",
         "Units": [
             ureg.ampere / ureg.meter**2,
@@ -395,7 +403,7 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
     # remove "Derived Statistics" rows
     # why Standard Deviation and Variance are NaN??
     print(
-        f"createStatsTable: name={name}, aggregate stats by datatype and field ({len(stats)}) items",
+        f"createStatsTable: name={name}, aggregate stats by datatype and field items ({len(stats)})",
         flush=True,
     )
     _dataset = {
@@ -425,9 +433,20 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
             # print(f"DescriptiveStats for datatype={datatype}, key={key}:")
             # print(f"dataset: {len(_dataset[datatype][key])}")
 
-            (physic, fieldname) = key.split(".")
+            toolbox = ""
+            keyinfo = key.split(".")
+            # print(f"keyinfo={keyinfo}", flush=True)
+            if len(keyinfo) == 2:
+                (physic, fieldname) = keyinfo
+            elif len(keyinfo) == 3:
+                (toolbox, physic, fieldname) = keyinfo
+            else:
+                raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
             units = {fieldname: fieldunits[fieldname]["Units"]}
-            # print(f"physic={physic}, fieldname={fieldname}", flush=True)
+            # print(
+            #     f"toolxbox={toolbox}, physic={physic}, fieldname={fieldname}",
+            #     flush=True,
+            # )
             # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
             symbol = fieldunits[fieldname]["Symbol"]
             [in_unit, out_unit] = fieldunits[fieldname]["Units"]
@@ -468,11 +487,11 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
             # see: https://github.com/pandas-dev/pandas/issues/29435
             values = df["Variable"].to_list()
             # print(f"values={values}", flush=True)
-            out_values = [value.replace(fieldname, rf"{symbol}") for value in values]
+            out_values = [value.replace(key, rf"{symbol}") for value in values]
             out_values = [rf"{value} [{out_unit:~P}]" for value in out_values]
+            # print(f"out_values={out_values}", flush=True)
             df = df.assign(Variable=out_values)
             # print(f"df[Variable]={df['Variable'].to_list()}", flush=True)
-            # print(f"out_values={out_values}", flush=True)
             ndf = {}
             for column in ["Minimum", "Mean", "Maximum", "Standard Deviation"]:
                 values = df[column].to_list()
@@ -498,6 +517,9 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
             # print("change units for Moments")
             ndf = {}
             Munits = [in_unit, out_unit]
+            if in_unit == ureg.kelvin:
+                Munits = [in_unit, in_unit]
+                # print("keep kelvin unit for Moments", flush=True)
             # print(f"units={units}, type={type(units)}", flush=True)
             # print(f"Munits={Munits}, type={type(Munits)}", flush=True)
             for column in ["M2", "M3", "M4"]:
@@ -509,6 +531,9 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
                 for i, unit in enumerate(Munits):
                     # print(f"i={i}", flush=True)
                     unit_ = fieldunits[fieldname]["Units"][i]
+                    if fieldunits[fieldname]["Units"][0] == ureg.kelvin:
+                        unit_ = ureg.kelvin
+                        # print("keep kelvin unit for Moment", flush=True)
                     # print(f"units[{i}]={unit_}", flush=True)
                     # print(f"Munits[{i}]={Munits[i]}", flush=True)
                     MomentUnits[column].append(Munits[i] * unit_)
@@ -550,41 +575,36 @@ def createStatsTable(stats: list, name: str, verbose: bool = False) -> pd.DataFr
         for datatype in _dataset:
             for key in _dataset[datatype]:
                 os.remove(f"{key}-descriptivestats.csv")
-                os.remove(f"{name}-{key}-descriptivestats.csv")
-
+                try:
+                    os.remove(f"{name}-{key}-descriptivestats.csv")
+                except:
+                    pass
     return total_df
 
 
-def createTable(file: str, key: str, name: str):
+def createTable(file: str, key: str, name: str, verbose: bool = False):
 
+    if verbose:
+        print(f"createTable: file={file}, key={key}", flush=True)
     csv = pd.read_csv(file)
     keys = csv.columns.values.tolist()
-    print(f"createTable: file={file}, key={key}", flush=True)
-    # print(tabulate(csv, headers="keys", tablefmt="psql"))
 
     # drop following keys
     csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
     dropped_keys = ["Row ID", "Cardinality", "Kurtosis", "Skewness", "Sum", "Variance"]
     csv.drop(columns=dropped_keys, inplace=True)
 
-    # print("createTable: post-process stats table", flush=True)
-    # print(tabulate(csv, headers="keys", tablefmt="psql"))
-
     # for each row "Derived Stats" copy value to "Primary Statistics"
     primary = csv.query("BlockName == 'Primary Statistics'").dropna(axis="columns")
-    # print(tabulate(primary, headers="keys", tablefmt="psql"))
     primary.drop(columns=["BlockName"], inplace=True)
-    # print("primary:", tabulate(primary, headers="keys", tablefmt="psql"))
+
     derived = csv.query("BlockName == 'Derived Statistics'").dropna(axis="columns")
     derived.reset_index(drop=True, inplace=True)
-    # print("derived:", tabulate(derived, headers="keys", tablefmt="psql"))
     derived.drop(columns=["BlockName"], inplace=True)
     stats_ = primary.join(derived)
-    # print(tabulate(stats_, headers="keys", tablefmt="psql"))
 
     (nrows, ncols) = stats_.shape
     stats_["Name"] = [name for i in range(nrows)]
-    # print("join:\n", tabulate(stats_, headers="keys", tablefmt="psql"))
     return stats_
 
 
@@ -601,7 +621,14 @@ def plotHisto(file, name: str, key: str, volume: float, show: bool = True):
 
     # get key unit
     print(f"plotHisto: file={file}, key={key}", flush=True)
-    (physic, fieldname) = key.split(".")
+    keyinfo = key.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -612,7 +639,7 @@ def plotHisto(file, name: str, key: str, volume: float, show: bool = True):
     units = {fieldname: fieldunits[fieldname]["Units"]}
     values = csv["bin_extents"].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv = csv.assign(bin_extents=[f"{val:.3f}" for val in out_values])
+    csv = csv.assign(bin_extents=out_values)  # [f"{val:.3f}" for val in out_values])
     csv["Volume_total"] = csv["Volume_total"] / volume * 100
 
     csv.plot.bar(
@@ -630,6 +657,7 @@ def plotHisto(file, name: str, key: str, volume: float, show: bool = True):
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
     ax.yaxis.set_major_formatter(lambda x, pos: f"{x:.1f}")
+    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
     show = False
     if show:
         plt.show()
@@ -702,7 +730,8 @@ def resultinfo(input, verbose: bool = False) -> dict:
     """
     returns a dict gathering info on PointData, CellData and FieldData
     """
-    print(f"resultinfo: input={input}", flush=True)
+    if verbose:
+        print(f"resultinfo:", flush=True)
 
     datadict = {
         "PointData": {"TypeMode": "POINT", "AttributeMode": "Point Data", "Arrays": {}},
@@ -748,14 +777,20 @@ def getresultInfo(key, verbose: bool = False, printed: bool = True) -> dict:
         "Components": components,
         "Bounds": bounds,
     }
-    if name not in ignored_keys:
+    if name not in ignored_keys and verbose:
         print(f"getresultInfo {name}: datadict={datadict}", flush=True)
 
     return datadict
 
 
 def resultStats(
-    input, name: str, volume: float, histo: bool = False, verbose: bool = False
+    input,
+    name: str,
+    volume: float,
+    histo: bool = False,
+    BinCount: int = 20,
+    show: bool = False,
+    verbose: bool = False,
 ) -> dict:
     """
     compute stats for PointData, CellData and FieldData
@@ -764,7 +799,8 @@ def resultStats(
     """
 
     datadict = resultinfo(input, verbose)
-    print(f"resultStats[{name}]: datadict={datadict}", flush=True)
+    if verbose:
+        print(f"resultStats[{name}]: datadict={datadict}", flush=True)
     for datatype in datadict:
         if datatype != "FieldData":
             AttributeMode = datadict[datatype]["AttributeMode"]
@@ -773,11 +809,22 @@ def resultStats(
                 if not key in ignored_keys:
 
                     found = False
-                    (physic, fieldname) = key.split(".")
+                    keyinfo = key.split(".")
+                    # print(f"keyinfo={keyinfo}", flush=True)
+                    if len(keyinfo) == 2:
+                        (physic, fieldname) = keyinfo
+                    elif len(keyinfo) == 3:
+                        (toolbox, physic, fieldname) = keyinfo
+                    else:
+                        raise RuntimeError(
+                            f"{key}: cannot get keyinfo as splitted char"
+                        )
+
                     for excluded in fieldunits[fieldname]["Exclude"]:
                         if excluded in name:
                             found = True
-                            print(f"ignore block: {name}", flush=True)
+                            if verbose:
+                                print(f"ignore block: {name}", flush=True)
                             break
 
                     if not found:
@@ -794,7 +841,14 @@ def resultStats(
 
                             if histo and not key.endswith("norm"):
                                 getresultHisto(
-                                    input, name, volume, key, TypeMode, Components
+                                    input,
+                                    name,
+                                    volume,
+                                    key,
+                                    TypeMode,
+                                    Components,
+                                    BinCount=BinCount,
+                                    show=show,
                                 )
 
     # display stats
@@ -802,16 +856,22 @@ def resultStats(
 
 
 def getresultStats(
-    input, name: str, key: str, AttributeMode: str, printed: bool = True
+    input,
+    name: str,
+    key: str,
+    AttributeMode: str,
+    printed: bool = True,
+    verbose: bool = False,
 ):
     """
     compute stats for key
     """
 
-    print(
-        f"getresultStats: name={name}, key={key}, AttributeMode={AttributeMode}",
-        flush=True,
-    )
+    if verbose:
+        print(
+            f"getresultStats: name={name}, key={key}, AttributeMode={AttributeMode}",
+            flush=True,
+        )
 
     # if field is a vector, create a field for its norm
 
@@ -832,8 +892,10 @@ def getresultStats(
         statistics, spreadSheetView, "SpreadSheetRepresentation"
     )
     spreadSheetView.Update()
+
+    filename = f"{name}-{key}-descriptivestats.csv"
     export = ExportView(
-        f"{name}-{key}-descriptivestats.csv",
+        filename,
         view=spreadSheetView,
         RealNumberNotation="Scientific",
     )
@@ -849,7 +911,7 @@ def getresultStats(
     Delete(statistics)
     del statistics
 
-    csv = createTable(f"{name}-{key}-descriptivestats.csv", key, name)
+    csv = createTable(filename, key, name, verbose)
 
     return csv
 
@@ -931,7 +993,7 @@ def getresultHisto(
     Delete(histogram1)
     del histogram1
 
-    plotHisto(f"{name}-{key}-histogram.csv", name, key, volume)
+    plotHisto(f"{name}-{key}-histogram.csv", name, key, volume, show=show)
 
     # remove temporary csv files
     os.remove(f"{name}-{key}-histogram.csv")
@@ -973,6 +1035,8 @@ def meshinfo(
     input,
     ComputeStats: bool = True,
     ComputeHisto: bool = False,
+    BinCount: int = 10,
+    show: bool = False,
     verbose: bool = False,
     printed: bool = True,
 ) -> tuple:
@@ -1035,14 +1099,9 @@ def meshinfo(
                 f"rectTocylField: {key} - unsupported AttributeType: {AttributeType}"
             )
         inputDataPoint = [field.Name for field in input.PointData]
-        print(
-            f"rectTocylField: input PointData = {inputDataPoint}",
-            flush=True,
-        )
 
         # check if r exists already
         if "r" in inputDataPoint:
-            print("tutu")
             # skip the next 3 steps: aka calculator1 to calculator3
             calculator3 = input
 
@@ -1052,46 +1111,29 @@ def meshinfo(
             calculator1.ResultArrayName = "r"
             calculator1.Function = "sqrt(coordsX*coordsX+coordsY*coordsY)"
             calculator1.UpdatePipeline()
-            print("create r PointData")
-            print(
-                f"rectTocylField: calculator1 PointData = {[field.Name for field in calculator1.PointData]}",
-                flush=True,
-            )
 
             calculator2 = Calculator(Input=calculator1)
             calculator2.AttributeType = AttributeType  # 'Cell Data'
             calculator2.ResultArrayName = "Cos"
             calculator2.Function = "coordsX/r"
             calculator2.UpdatePipeline()
-            print("create Cos PointData", flush=True)
-            print(
-                f"rectTocylField: calculator1 PointData = {[field.Name for field in calculator2.PointData]}",
-                flush=True,
-            )
 
             calculator3 = Calculator(Input=calculator2)
             calculator3.AttributeType = AttributeType  # 'Cell Data'
             calculator3.ResultArrayName = "Sin"
             calculator3.Function = "coordsY/r"
             calculator3.UpdatePipeline()
-            print("create Sin PointData", flush=True)
-            print(
-                f"rectTocylField: calculator1 PointData = {[field.Name for field in calculator3.PointData]}",
-                flush=True,
-            )
 
         calculator4 = Calculator(Input=calculator3)
         calculator4.AttributeType = AttributeType  # 'Cell Data'
         calculator4.ResultArrayName = f"{key}_ur"
         calculator4.Function = f'"{key}_X"*Cos+"{key}_Y"*Sin'
         calculator4.UpdatePipeline()
-        print("create ur PointData", flush=True)
 
         calculator5 = Calculator(Input=calculator4)
         calculator5.AttributeType = AttributeType  # 'Cell Data'
         calculator5.ResultArrayName = f"{key}_ut"
         calculator5.Function = f'-"{key}_X"*Sin+"{key}_Y"*Cos'
-        print("create ut PointData", flush=True)
 
         calculator5.UpdatePipeline()
         return calculator5
@@ -1119,14 +1161,17 @@ def meshinfo(
         calculator1.UpdatePipeline()
         return calculator1
 
-    # for vector
-    print("Add Norm for vectors:")
-    calculator = input
-
     # rectTocyl: need CellDataToPointData before
     # for temperature add, for forces and densities norm, rescale
+    cellDatatoPointData1 = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
 
-    for field in input.PointData:
+    # for vector
+    print("Add Norm for vectors and RectToCyl:")
+    calculator = cellDatatoPointData1
+
+    for field in cellDatatoPointData1.PointData:
         if field.GetNumberOfComponents() == 3:
             print(
                 f"create {field.Name}norm for {field.Name} PointData vector",
@@ -1142,13 +1187,6 @@ def meshinfo(
             calculator = rectTocylField(
                 calculator, field.Name, field.Name, "Point Data"
             )
-    for field in input.CellData:
-        if field.GetNumberOfComponents() == 3:
-            print(f"create norm for {field.Name} CellData vector", flush=True)
-            calculator = createVectorNorm(
-                calculator, field.Name, field.Name, "Cell Data"
-            )
-            # cannot create Ur and Ut for CellData vector, apply only to PointData vector
 
     print("Get mesh size")
     cellsize = CellSize(calculator)  # input
@@ -1183,8 +1221,16 @@ def meshinfo(
         # print(f'block fieldData[volume]: {volume}, type={type(volume)}')
         np_volume = np_dataset.FieldData["Volume"]
         # print(f'block fieldData[np_volume]: {np_volume}, type={type(np_volume)}, length={algs.shape(np_volume)}')
+        tvol = algs.sum(np_volume)
+        vunits = fieldunits["Volume"]["Units"]
+        mm3 = f"{vunits[1]:~P}"
+        tvol_mm3 = convert_data(
+            {"Volume": vunits},
+            tvol,
+            "Volume",
+        )
         print(
-            f"block fieldData[np_volume]: total={algs.sum(np_volume)}, parts={algs.shape(np_volume)}"
+            f"block fieldData[np_volume]: total={tvol_mm3} {mm3}, parts={algs.shape(np_volume)}"
         )
 
         hierarchy = dataInfo.GetHierarchy()
@@ -1193,6 +1239,7 @@ def meshinfo(
         blocks = hierarchy.GetNumberOfChildren(rootnode)
         print(f"Load blocks: {blocks}")
 
+        sum_vol = 0
         for i in range(blocks):
             child = hierarchy.GetChild(rootnode, i)
             name = hierarchy.GetNodeName(child)
@@ -1202,16 +1249,28 @@ def meshinfo(
 
             nodes = child_info.GetNumberOfPoints()
             cells = child_info.GetNumberOfCells()
+            vol = np_volume.Arrays[i][0]
+            vol_mm3 = convert_data(
+                {"Volume": vunits},
+                vol,
+                "Volume",
+            )
             print(
-                f"block[{i}]: {name}, nodes={nodes}, cells={cells}, vol={np_volume.Arrays[i][0]}"
+                f"block[{i}]: {name}, nodes={nodes}, cells={cells}, vol={vol_mm3} {mm3}"
             )
 
             blockdata[rootChild] = {
                 "name": name,
                 "nodes": nodes,
                 "cells": cells,
-                "volume": np_volume.Arrays[i][0],
+                "volume": vol,
             }
+
+            sum_vol += vol
+
+        # check tvol == Sum(vol)
+        if abs(1 - sum_vol / tvol) > 1.0e-3:
+            raise RuntimeError(f"Total volume != Sum(vol), error={abs(1-sum_vol/tvol)}")
 
         # Compute Stats
         stats = []
@@ -1379,9 +1438,15 @@ def meshinfo(
         mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
         mergeBlocks1.UpdatePipeline()
         statsdict = resultStats(
-            mergeBlocks1, "insert", sum(volumes), histo=ComputeHisto
+            mergeBlocks1,
+            "insert",
+            sum(volumes),
+            histo=ComputeHisto,
+            BinCount=BinCount,
+            show=show,
+            verbose=verbose,
         )
-        print(f"insert statsdict={statsdict}")
+        # print(f"insert statsdict={statsdict}")
         stats.append(statsdict)
         extractBlock1.UpdatePipeline()
         Delete(extractBlock1)
@@ -1389,7 +1454,8 @@ def meshinfo(
 
         # Force a garbage collection
         collected = gc.collect()
-        print(f"Garbage collector: collected {collected} objects.")
+        if verbose:
+            print(f"Garbage collector: collected {collected} objects.")
 
         # aggregate stats data
         createStatsTable([statsdict], "insert")
@@ -1405,7 +1471,13 @@ def meshinfo(
             extractBlock1.Selectors = [block]
             extractBlock1.UpdatePipeline()
             statsdict = resultStats(
-                extractBlock1, name, blockdata[block]["volume"], histo=ComputeHisto
+                extractBlock1,
+                name,
+                blockdata[block]["volume"],
+                histo=ComputeHisto,
+                BinCount=BinCount,
+                show=show,
+                verbose=verbose,
             )
             stats.append(statsdict)
             Delete(extractBlock1)
@@ -1413,13 +1485,14 @@ def meshinfo(
 
             # Force a garbage collection
             collected = gc.collect()
-            print(f"Garbage collector: collected {collected} objects.")
+            if verbose:
+                print(f"Garbage collector: collected {collected} objects.")
 
             # aggregate stats data
             createStatsTable([statsdict], name)
 
-        # # aggregate stats data
-        # createStatsTable(stats, "total")
+        # aggregate stats data
+        createStatsTable(stats, "total")
 
     return cellsize, blockdata, dict()
 
@@ -1439,6 +1512,10 @@ def deformed(input, factor: float = 1, printed: bool = True):
             print(f"warpByVector1: {prop}={warpByVector1.GetPropertyValue(prop)}")
 
     warpByVector1.UpdatePipeline()
+    print(f"warpByVector1: PointData={list(warpByVector1.PointData.keys())}")
+    print(f"warpByVector1: CellData={list(warpByVector1.CellData.keys())}")
+
+    sm.Fetch(warpByVector1)
     return warpByVector1
 
 
@@ -1795,7 +1872,14 @@ def displayField(
     LUTColorBar = GetScalarBar(LUT)
     # LUTColorBar.Position = [0.9118075801749271, 0.01059135039717564]
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -1872,7 +1956,14 @@ def make3Dview(
     print(flush=True)
     print(f"blockdata={blockdata}", flush=True)
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     boxclip = makeboxclip(input, "boxclip")
@@ -1883,7 +1974,7 @@ def make3Dview(
 
     filename = f"{field}.png"
     if suffix is not None:
-        filename = f"{field}-{suffix}.png"
+        filename = f"{field}{suffix}.png"
 
     # position is None
     renderView = displayField(
@@ -1927,7 +2018,14 @@ def makeOxOyview(
         print(f", suffix={suffix}", end="")
     print(f", z={z}", flush=True)
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     r_units = {"coord": fieldunits["coord"]["Units"]}
@@ -1994,7 +2092,14 @@ def makeOrOzview(
         print(f", suffix={suffix}", end="")
     print(f", theta={theta}", flush=True)
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     angle = theta + 90
@@ -2058,6 +2163,10 @@ def plotOr(
     radian = theta * pi / 180.0
 
     plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
+    # get params list
+    if not printed:
+        for prop in plotOverLine.ListProperties():
+            print(f"plotOverLine': {prop}={plotOverLine.GetPropertyValue(prop)}")
 
     # init the 'Line' selected for 'Source'
     plotOverLine.Source.Point1 = [r0 * cos(radian), r0 * sin(radian), z]
@@ -2077,7 +2186,14 @@ def plotOr(
         from matplotlib.ticker import MaxNLocator
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        (physic, fieldname) = key.split(".")
+        keyinfo = key.split(".")
+        # print(f"keyinfo={keyinfo}", flush=True)
+        if len(keyinfo) == 2:
+            (physic, fieldname) = keyinfo
+        elif len(keyinfo) == 3:
+            (toolbox, physic, fieldname) = keyinfo
+        else:
+            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
         # print(f"physic={physic}, fieldname={fieldname}", flush=True)
         # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
         symbol = fieldunits[fieldname]["Symbol"]
@@ -2177,7 +2293,14 @@ def plotOz(
         from matplotlib.ticker import MaxNLocator
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        (physic, fieldname) = key.split(".")
+        keyinfo = key.split(".")
+        # print(f"keyinfo={keyinfo}", flush=True)
+        if len(keyinfo) == 2:
+            (physic, fieldname) = keyinfo
+        elif len(keyinfo) == 3:
+            (toolbox, physic, fieldname) = keyinfo
+        else:
+            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
         symbol = fieldunits[fieldname]["Symbol"]
         msymbol = symbol
         if "mSymbol" in fieldunits[fieldname]:
@@ -2241,7 +2364,14 @@ def plotOz(
 
 
 # @profile
-def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True):
+def plotTheta(
+    input,
+    r: float,
+    z: float,
+    show: bool = True,
+    printed: bool = True,
+    verbose: bool = False,
+):
     """
     for theta, need to apply CellDataToPointData filter
     """
@@ -2292,7 +2422,14 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
         from numpy import pi, arctan2
 
         print(f"plotThetaField: files={files}, key={key}, show={show}", flush=True)
-        (physic, fieldname) = key.split(".")
+        keyinfo = key.split(".")
+        # print(f"keyinfo={keyinfo}", flush=True)
+        if len(keyinfo) == 2:
+            (physic, fieldname) = keyinfo
+        elif len(keyinfo) == 3:
+            (toolbox, physic, fieldname) = keyinfo
+        else:
+            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
         symbol = fieldunits[fieldname]["Symbol"]
         msymbol = symbol
         if "mSymbol" in fieldunits[fieldname]:
@@ -2393,7 +2530,8 @@ def plotTheta(input, r: float, z: float, show: bool = True, printed: bool = True
 
     # Force a garbage collection
     collected = gc.collect()
-    print(f"Garbage collector: collected {collected} objects.")
+    if verbose:
+        print(f"Garbage collector: collected {collected} objects.")
 
 
 parser = argparse.ArgumentParser()
@@ -2403,6 +2541,7 @@ parser.add_argument("--stats", help="activate stats calculations", action="store
 parser.add_argument(
     "--histos", help="activate histograms calculations", action="store_true"
 )
+parser.add_argument("--bins", type=int, help="set bins number (default 10)", default=10)
 parser.add_argument("--plots", help="activate plots calculations", action="store_true")
 parser.add_argument("--views", help="activate views calculations", action="store_true")
 parser.add_argument(
@@ -2416,6 +2555,11 @@ parser.add_argument("--z", nargs="*", type=float, help="select z in m to display
 parser.add_argument(
     "--save",
     help="save graphs",
+    action="store_true",
+)
+parser.add_argument(
+    "--verbose",
+    help="activate verbose mode",
     action="store_true",
 )
 
@@ -2461,20 +2605,26 @@ if args.field:
 
 # get Block info
 cellsize, blockdata, statsdict = meshinfo(
-    reader, ComputeStats=args.stats, ComputeHisto=args.histos
+    reader,
+    ComputeStats=args.stats,
+    ComputeHisto=args.histos,
+    BinCount=args.bins,
+    show=(not args.save),
+    verbose=args.verbose,
 )
 
 # create 3D view
-if not args.field:
-    key = None
-    for vkey in list(reader.PointData.keys()):
-        if not vkey in ignored_keys:
-            key = vkey
-            break
+if args.views:
+    if not args.field:
+        key = None
+        for vkey in list(reader.PointData.keys()):
+            if not vkey in ignored_keys:
+                key = vkey
+                break
 
-    field = reader.PointData[key]
-    color = ["POINTS", key]
-    print(f"force field to {key}", flush=True)
+        field = reader.PointData[key]
+        color = ["POINTS", key]
+        print(f"force field to {key}", flush=True)
 
 # Plots
 if args.plots:
@@ -2489,7 +2639,14 @@ if args.plots:
 # When dealing with elasticity
 suffix = ""
 datadict = resultinfo(cellsize)
-if "elasticity.displacement" in list(datadict["PointData"]["Arrays"].keys()):
+found = False
+for field in list(reader.PointData.keys()):
+    if field.endswith("displacement"):
+        found = True
+        break
+print(f"displacement found={found} in {list(reader.PointData.keys())}")
+
+if found:
     # make3Dview(cellsize, blockdata, key, color, addruler=True)
     if args.channels:
         print("Save stl for original geometries:")
@@ -2538,7 +2695,7 @@ if "elasticity.displacement" in list(datadict["PointData"]["Arrays"].keys()):
             else:
                 print(" ignored", flush=True)
 
-    suffix = "deformed"
+    suffix = "-deformed"
     cellsize = geometry
 
 # Views
