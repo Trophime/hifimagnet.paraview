@@ -4,7 +4,7 @@ import gc
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import hist
-from math import pi
+from math import pi, sqrt
 
 from tabulate import tabulate
 
@@ -42,6 +42,8 @@ with warnings.catch_warnings():
 
 # Pint configuration
 ureg = UnitRegistry()
+ureg.define("percent = 0.01 = %")
+ureg.define("ppm = 1e-6")
 ureg.default_system = "SI"
 ureg.autoconvert_offset_to_baseunit = True
 
@@ -133,27 +135,27 @@ fieldunits = {
         ],
     },
     "Current": {"Symbol": "I", "Units": [ureg.ampere, ureg.ampere]},
-    "Power": {"Symbol": "W", "Units": [ureg.watt, ureg.watt]},
-    "Temperature": {"Symbol": "T", "Units": [ureg.degK, ureg.degC]},
-    "electric_potential": {"Symbol": "V", "Units": [ureg.volt, ureg.volt]},
-    "current_density": {
+    "Power": {"Symbol": "W", "Units": [ureg.watt, ureg.megawatt]},
+    "Qth": {
+        "Symbol": "Qth",
+        "Units": [
+            ureg.watt / ureg.meter**3,
+            ureg.megawatt / ureg.Unit(distance_unit) ** 3,
+        ],
+        "Exclude": ["Air", "Isolant"],
+    },
+    "temperature": {
+        "Symbol": "T",
+        "Units": [ureg.degK, ureg.degC],
+        "Exclude": ["Air"],
+    },
+    "U": {
+        "Symbol": "V",
+        "Units": [ureg.volt, ureg.volt],
+        "Exclude": ["Air", "Isolant"],
+    },
+    "Jth": {
         "Symbol": "J",
-        "Units": [
-            ureg.ampere / ureg.meter**2,
-            ureg.ampere / ureg.Unit(distance_unit) ** 2,
-        ],
-        "Exclude": ["Air", "Isolant"],
-    },
-    "current_density_x": {
-        "Symbol": "Jx",
-        "Units": [
-            ureg.ampere / ureg.meter**2,
-            ureg.ampere / ureg.Unit(distance_unit) ** 2,
-        ],
-        "Exclude": ["Air", "Isolant"],
-    },
-    "current_density_y": {
-        "Symbol": "Jy",
         "Units": [
             ureg.ampere / ureg.meter**2,
             ureg.ampere / ureg.Unit(distance_unit) ** 2,
@@ -169,7 +171,7 @@ fieldunits = {
         ],
         "Exclude": ["Air", "Isolant"],
     },
-    "Fh": {
+    "Flaplace": {
         "Symbol": "F",
         "Units": [
             ureg.newton / ureg.meter**3,
@@ -177,19 +179,25 @@ fieldunits = {
         ],
         "Exclude": ["Air", "Isolant"],
     },
-    "magnetic_potential": {
+    "atheta": {
         "Symbol": "A",
         "Units": [
             ureg.ampere / ureg.meter,
             ureg.ampere / ureg.Unit(distance_unit),
         ],
+        "Exclude": [],
     },
-    "Bg_MagField": {
+    "Bg": {
         "Symbol": "B_Bg",
         "mSymbol": r"$B_{bg}$",
         "Units": [ureg.tesla, ureg.tesla],
+        "Exclude": [],
     },
-    "magnetic_field": {"Symbol": "B", "Units": [ureg.tesla, ureg.tesla]},
+    "B": {
+        "Symbol": "B",
+        "Units": [ureg.tesla, ureg.tesla],
+        "Exclude": [],
+    },
     "displacement": {
         "Symbol": "u",
         "Units": [
@@ -198,16 +206,16 @@ fieldunits = {
         ],
         "Exclude": ["Air"],
     },
-    "displacement_x": {
-        "Symbol": "ux",
+    "displacement_r": {
+        "Symbol": "ur",
         "Units": [
             ureg.meter / ureg.second,
             ureg.Unit(distance_unit) / ureg.second,
         ],
         "Exclude": ["Air"],
     },
-    "displacement_y": {
-        "Symbol": "uy",
+    "displacement_z": {
+        "Symbol": "uz",
         "Units": [
             ureg.meter / ureg.second,
             ureg.Unit(distance_unit) / ureg.second,
@@ -240,25 +248,97 @@ fieldunits = {
         "Exclude": ["Air"],
     },
     # "PoissonCoefficient": {}, # no units
-    "princial_stress_0": {
-        "Symbol": "principal_stress_0",
-        "mSymbol": r"$\bar{\bar{\sigma}}_0$",
+    "strain_00": {
+        "Symbol": "strain_00",
+        "mSymbol": r"$\bar{\bar{\epsilon}}_{00}$",
+        "Units": [
+            ureg.dimensionless,
+            ureg.dimensionless,
+        ],
+        "Exclude": ["Air"],
+    },
+    "strain_01": {
+        "Symbol": "strain_01",
+        "mSymbol": r"$\bar{\bar{\epsilon}}_{01}$",
+        "Units": [
+            ureg.dimensionless,
+            ureg.dimensionless,
+        ],
+        "Exclude": ["Air"],
+    },
+    "strain_10": {
+        "Symbol": "strain_10",
+        "mSymbol": r"$\bar{\bar{\epsilon}}_{10}$",
+        "Units": [
+            ureg.dimensionless,
+            ureg.dimensionless,
+        ],
+        "Exclude": ["Air"],
+    },
+    "strain_11": {
+        "Symbol": "strain_11",
+        "mSymbol": r"$\bar{\bar{\epsilon}}_{11}$",
+        "Units": [
+            ureg.dimensionless,
+            ureg.dimensionless,
+        ],
+        "Exclude": ["Air"],
+    },
+    "stress_00": {
+        "Symbol": "stress_00",
+        "mSymbol": r"$\bar{\bar{\sigma}}_{00}$",
         "Units": [
             ureg.pascal,
             ureg.megapascal,
         ],
         "Exclude": ["Air"],
     },
-    "princial_stress_1": {
-        "Symbol": "principal_stress_1",
-        "mSymbol": r"$\bar{\bar{\sigma}}_1$",
+    "stress_01": {
+        "Symbol": "stress_01",
+        "mSymbol": r"$\bar{\bar{\sigma}}_{01}$",
         "Units": [
             ureg.pascal,
             ureg.megapascal,
         ],
         "Exclude": ["Air"],
     },
-    "von_mises_criterions": {
+    "stress_10": {
+        "Symbol": "stress_10",
+        "mSymbol": r"$\bar{\bar{\sigma}}_{10}$",
+        "Units": [
+            ureg.pascal,
+            ureg.megapascal,
+        ],
+        "Exclude": ["Air"],
+    },
+    "stress_11": {
+        "Symbol": "stress_11",
+        "mSymbol": r"$\bar{\bar{\sigma}}_{11}$",
+        "Units": [
+            ureg.pascal,
+            ureg.megapascal,
+        ],
+        "Exclude": ["Air"],
+    },
+    "HoopStrain": {
+        "Symbol": "HoopStrain",
+        "mSymbol": r"$\bar{\bar{\epsilon}}_{Hoop}$",
+        "Units": [
+            ureg.dimensionless,
+            ureg.dimensionless,
+        ],
+        "Exclude": ["Air"],
+    },
+    "HoopStress": {
+        "Symbol": "HoopStress",
+        "mSymbol": r"$\bar{\bar{\sigma}}_{Hoop}$",
+        "Units": [
+            ureg.pascal,
+            ureg.megapascal,
+        ],
+        "Exclude": ["Air"],
+    },
+    "Vonmises": {
         "Symbol": "VonMises",
         "mSymbol": r"$\bar{\bar{\sigma}}_{VonMises}$",
         "Units": [
@@ -275,6 +355,7 @@ ignored_keys = [
     "elasticity.PoissonCoefficient",
     "elasticity.YoungModulus",
     "Area",
+    "AxiVolume",
     "r",
     "Cos",
     "Sin",
@@ -353,11 +434,21 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
     for datatype in _dataset:
         # print(f"datatype={datatype}")
         for key in _dataset[datatype]:
-            # print(f"DescriptiveStats for datatype={datatype}, key={key}:")
+            # print(f"DescriptiveStats for datatype={datatype}, key={key}:", flush=True)
             # print(f"dataset: {len(_dataset[datatype][key])}")
 
-            (physic, fieldname) = key.split(".")
-            units = {fieldname: fieldunits[fieldname]["Units"]}
+            keyinfo = key.split(".")
+            # print(f"keyinfo={keyinfo}", flush=True)
+            if len(keyinfo) == 2:
+                (physic, fieldname) = keyinfo
+            elif len(keyinfo) == 3:
+                (toolbox, physic, fieldname) = keyinfo
+            else:
+                raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+
+            # print(f"toolbox={toolbox}", flush=True)
+            # print(f"physic={physic}", flush=True)
+            # print(f"fieldname={fieldname}", flush=True)
 
             # Exclude row with Name in fieldunits[fieldname]['Exclude']
             excludeblocks = fieldunits[fieldname]["Exclude"]
@@ -367,13 +458,15 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
                     found = True
                     break
 
-            # for dset in _dataset[datatype][key]:
-            #     print(tabulate(dset, headers="keys", tablefmt="psql"))
+            """
+            for dset in _dataset[datatype][key]:
+                print(tabulate(dset, headers="keys", tablefmt="psql"))
+            """
             if not found:
                 df = pd.concat(_dataset[datatype][key])
-                print(
-                    f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:"
-                )
+                # print(
+                #     f"Aggregated DescriptiveStats for datatype={datatype}, key={key}:"
+                # )
 
                 # Reorder columns
                 df = df[
@@ -387,23 +480,8 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
                         "M2",
                         "M3",
                         "M4",
-                        "Variance",
                     ]
                 ]
-                # how to: rewrite tab contents using symbol and units
-                values = df["Variable"].to_list()
-                out_values = [rf"{fieldunits[fieldname]['Symbol']}" for value in values]
-                df = df.assign(Variable=out_values)
-                for column in ["Minimum", "Mean", "Maximum", "Standard Deviation"]:
-                    values = df[column].to_list()
-                    out_values = convert_data(units, values, fieldname)
-                    df = df.assign(column=[f"{val:.2f}" for val in out_values])
-
-                # watch out:
-                # variance is square of (std)
-                # M2: moment of order 2 (square of mean)
-                # M3: moment of order 3 (cube of mean)
-                # M4: moment of order 4 (cube of mean)
 
                 if verbose:
                     print(
@@ -414,57 +492,38 @@ def createStatsTable(stats: list, name: str, verbose: bool = False):
 
     total_df = pd.concat(dfs)
     print(tabulate(total_df, headers="keys", tablefmt="psql", showindex=False))
-    total_df.to_csv(f"{name}-descriptivestats-create.csv")
+    total_df.to_csv(f"{name}-descriptiveAxistats-create.csv")
 
     pass
 
 
-def createTable(file: str, key: str, name: str):
-    import pandas as pd
-
-    csv = pd.read_csv(file)
-    keys = csv.columns.values.tolist()
-    print(f"createTable: file={file}, key={key}", flush=True)
-    # print(tabulate(csv, headers="keys", tablefmt="psql"))
-
-    # drop following keys
-    csv.rename(columns={"Block Name": "BlockName"}, inplace=True)
-    dropped_keys = ["Row ID", "Cardinality", "Kurtosis", "Skewness", "Sum"]
-    csv.drop(columns=dropped_keys, inplace=True)
-
-    # print("createTable: post-process stats table", flush=True)
-    # print(tabulate(csv, headers="keys", tablefmt="psql"))
-
-    # for each row "Derived Stats" copy value to "Primary Statistics"
-    primary = csv.query("BlockName == 'Primary Statistics'").dropna(axis="columns")
-    # print(tabulate(primary, headers="keys", tablefmt="psql"))
-    primary.drop(columns=["BlockName"], inplace=True)
-    # print("primary:", tabulate(primary, headers="keys", tablefmt="psql"))
-    derived = csv.query("BlockName == 'Derived Statistics'").dropna(axis="columns")
-    derived.reset_index(drop=True, inplace=True)
-    # print("derived:", tabulate(derived, headers="keys", tablefmt="psql"))
-    derived.drop(columns=["BlockName"], inplace=True)
-    stats_ = primary.join(derived)
-    # print(tabulate(stats_, headers="keys", tablefmt="psql"))
-
-    (nrows, ncols) = stats_.shape
-    stats_["Name"] = [name for i in range(nrows)]
-    # print("join:\n", tabulate(stats_, headers="keys", tablefmt="psql"))
-    return stats_
-
-
 # plot with matplotlib
-def plotHistoAxi(file, name: str, key: str, BinCount: int, show: bool = True):
+def plotHistoAxi(
+    filename: str,
+    name: str,
+    key: str,
+    BinCount: int,
+    show: bool = True,
+    verbose: bool = False,
+):
+    print(f"plotHistAxi: name={name}, key={key}, bin={BinCount}", flush=True)
 
     ax = plt.gca()
-    csv = pd.read_csv(file)
+    csv = pd.read_csv(filename)
     keys = csv.columns.values.tolist()
+    # print(f"plotHistAxi: keys={keys}", flush=True)
     # print("histo before scaling")
     # print(tabulate(csv, headers="keys", tablefmt="psql"))
 
     # get key unit
-    print(f"plotHisto: file={file}, key={key}", flush=True)
-    (physic, fieldname) = key.split(".")
+    keyinfo = key.replace("_Magnitude", "").split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -475,12 +534,17 @@ def plotHistoAxi(file, name: str, key: str, BinCount: int, show: bool = True):
     units = {fieldname: fieldunits[fieldname]["Units"]}
     values = csv[key].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv[field] = [f"{val:.2f}" for val in out_values]
+    csv[key] = out_values  # [f"{val:.2f}" for val in out_values]
 
-    hist(csv[key], bins=BinCount, weights=csv["AxiVol"], ax=ax, rot=45)
+    counts, extend_bins, patches = hist(csv[key], bins=BinCount, weights=csv["AxiVol"])
+    print(f"counts={counts}")
+    print(f"extend_bins={extend_bins}")
+    print(f"patches={patches}")
 
+    total_key = "Fraction of total Volume [%]"
     plt.xlabel(rf"{msymbol}[{out_unit:~P}]")
-    plt.ylabel("Fraction of total Area [%]")
+    plt.ylabel(total_key)
+    plt.xticks(rotation=45, ha="right")
     plt.title(f"{name}: {key}")
     plt.grid(True)
     # plt.legend(False)
@@ -488,30 +552,16 @@ def plotHistoAxi(file, name: str, key: str, BinCount: int, show: bool = True):
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
     ax.yaxis.set_major_formatter(lambda x, pos: f"{x:.1f}")
+    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.2f}")
     show = False
     if show:
         plt.show()
     else:
         plt.tight_layout()
-        plt.savefig(f"{name}-{key}-histogram-matplotlib.png", dpi=300)
+        plt.savefig(
+            f'{name}-{key.replace("_Magnitude", "")}-histogram-matplotlib.png', dpi=300
+        )
     plt.close()
-
-    # rename columns for tabulate
-    csv.rename(
-        columns={
-            "bin_extents": rf"{symbol} [{out_unit:~P}]",
-            "Area_total": "Fraction of total Area [%]",
-        },
-        inplace=True,
-    )
-    print(tabulate(csv, headers="keys", tablefmt="psql", showindex=False))
-
-    # check that sum is roughtly equal to 1
-    # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}')
-    eps = 1.0e-4
-    error = abs(1 - csv["Fraction of total Area [%]"].sum() / 100.0)
-    print(f"error={error}, check: {(abs(error) <= eps)}, eps={eps}", flush=True)
-    assert error <= eps, "Check Sum(Fraction) failed"
 
     pass
 
@@ -605,7 +655,8 @@ def getresultInfo(key, verbose: bool = False, printed: bool = True):
         "Components": components,
         "Bounds": bounds,
     }
-    print(f"getresultInfo {name}: datadict={datadict}", flush=True)
+    if verbose:
+        print(f"getresultInfo {name}: datadict={datadict}", flush=True)
 
     return datadict
 
@@ -618,57 +669,46 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
     """
 
     datadict = resultinfo(input, verbose)
-    print(f"resultStats[{name}]: datadict={datadict}", flush=True)
+    print(
+        f'resultStats[{name}]: datadict={datadict["PointData"]["Arrays"].keys()}',
+        flush=True,
+    )
+    PointData_keys = list(datadict["PointData"]["Arrays"].keys())
 
-    # PointData to CellData
-    # Cellsize
-    # cellcenters
-    pointDatatoCellData = PointDatatoCellData(
-        registrationName="CellDatatoPointData", Input=input
+    spreadSheetView = CreateView("SpreadSheetView")
+    cellCenters1Display = Show(input, spreadSheetView, "SpreadSheetRepresentation")
+    spreadSheetView.Update()
+
+    filename = f"{name}-Axi-cellcenters-all.csv"
+    ExportView(
+        filename,
+        view=spreadSheetView,
+        RealNumberNotation="Scientific",
     )
 
-    cellSize1 = CellSize(registrationName="CellSize1", Input=pointDatatoCellData)
-    # Properties modified on cellSize1 for 3D
-    cellSize1.ComputeVertexCount = 0
-    cellSize1.ComputeLength = 0
-    cellSize1.ComputeArea = 1  # for 2D
-    cellSize1.ComputeSum = 0
-    cellSize1.UpdatePipeline()
-    # print(f"cellSize1 CellData: {cellSize1.CellData[:]}")
+    csv = pd.read_csv(filename)
+    keys = csv.columns.values.tolist()
+    print(f"read_csv: csv={filename}, keys={keys}", flush=True)
 
-    cellCenters1 = CellCenters(registrationName="CellCenters1", Input=cellSize1)
-    # Properties modified on cellCenters1
-    cellCenters1.VertexCells = 1
+    PointData_keys = []
+    for item in input.PointData[:]:
+        suffix = ""
+        if item.GetNumberOfComponents() > 1:
+            suffix = "_Magnitude"
 
-    # add moments for each scalar CellData
-    datadict = resultinfo(cellCenters1)
-    for datatype in datadict:
-        if datatype == "CellData":
-            AttributeMode = datadict[datatype]["AttributeMode"]
-            TypeMode = datadict[datatype]["TypeMode"]
-            for key, kdata in datadict[datatype]["Arrays"].items():
-                if not key in ignored_keys:
-                    Components = kdata["Components"]
-                    bounds = kdata["Bounds"]
-                    if bounds[0][0] != bounds[0][1]:
-                        if Components == 1:
-                            tmp = cellCenters1
-                            for order in range(1, 5):
-                                cellCenters1 = momentN(
-                                    tmp, key, key, order, AttributeMode
-                                )
+            for component in range(item.GetNumberOfComponents()):
+                ignore = f"{item.Name}_{component}"
+                if ignore not in ignored_keys:
+                    ignored_keys.append(f"{item.Name}_{component}")
 
-    # compute integrals
-    integrateKeys(cellCenters1)
+        PointData_keys.append(f"{item.Name}{suffix}")
 
-    # reload csv
-    csv = pd.read_csv(f"{name}-integrals.csv")
-
-    # post-process csv: divide by Area from CellSize1
-    csv = csv / Area
-
-    # drop columns
-    # store res in same table as in resultstats (see getresultstats)
+    # print(f"PointData_keys={PointData_keys}")
+    # print(f"csv keys={keys}")
+    missing_keys = [key for key in PointData_keys if key not in keys]
+    if missing_keys:
+        print(f"missing_keys={missing_keys}")
+        exit(1)
 
     for datatype in datadict:
         if datatype == "PointData":
@@ -678,92 +718,89 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
                 if not key in ignored_keys:
                     Components = kdata["Components"]
                     bounds = kdata["Bounds"]
-                    if bounds[0][0] != bounds[0][1]:
-                        if not "Stats" in kdata:
-                            kdata["Stats"] = {}
 
-                        kdata["Stats"] = {} # pandas query from csv
-                        """
-                        print("resultStats:")
-                        print(
-                            tabulate(
-                                kdata["Stats"],
-                                headers="keys",
-                                tablefmt="psql",
-                            )
+                    keyinfo = key.split(".")
+                    # print(f"keyinfo={keyinfo}", flush=True)
+                    if len(keyinfo) == 2:
+                        (physic, fieldname) = keyinfo
+                    elif len(keyinfo) == 3:
+                        (toolbox, physic, fieldname) = keyinfo
+                    else:
+                        raise RuntimeError(
+                            f"{key}: cannot get keyinfo as splitted char"
                         )
-                        """
+
+                    symbol = fieldunits[fieldname]["Symbol"]
+                    msymbol = symbol
+                    if "mSymbol" in fieldunits[fieldname]:
+                        msymbol = fieldunits[fieldname]["mSymbol"]
+                    units = {fieldname: fieldunits[fieldname]["Units"]}
+                    [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                    if bounds[0][0] != bounds[0][1]:
+                        stats = {
+                            "Variable": [rf"{symbol}[{out_unit:~P}]"],
+                            "Name": [name],
+                            "Minimum": [convert_data(units, bounds[0][0], fieldname)],
+                            "M1": [0],
+                            "Maximum": [convert_data(units, bounds[0][1], fieldname)],
+                            "Standard Deviation": [0],
+                            "M2": [0],
+                            "M3": [0],
+                            "M4": [0],
+                        }
+
+                        # print(f"AxiStats for {key}", flush=True)
+                        if Components > 1:
+                            key = f"{key}_Magnitude"
+                        for order in range(1, 5):
+                            # print(f"Create moment{order} for {key}", flush=True)
+                            units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                            if in_unit != ureg.kelvin and order > 1:
+                                units[f"M{order}"] = [in_unit**order, out_unit**order]
+                            else:
+                                units[f"M{order}"] = [in_unit**order, in_unit**order]
+
+                            res = (
+                                2
+                                * pi
+                                * csv["Area"]
+                                * csv["Points_0"]
+                                * csv[key] ** order
+                            )
+                            value = res.sum() / Area
+                            # print(
+                            #     f"{key} M{order}: {value}, integ={res.sum()}, Area={Area}, name={name}")
+                            #    type={type(value)}, type={type(value.item())}
+                            out_res = convert_data(units, value.item(), f"M{order}")
+                            # print(f"M{order}: {out_res}")
+                            stats[f"M{order}"] = [out_res]
+
+                        stats["Standard Deviation"] = [
+                            sqrt(abs(stats["M1"][0] ** 2 - stats["M2"][0]))
+                        ]
+                        # rename M1 to Mean
+                        stats["Mean"] = stats["M1"]
+                        del stats["M1"]
+                        # print(f"{key}: stats={stats}", flush=True)
+
+                        kdata["Stats"] = pd.DataFrame.from_dict(stats)
+
+                        if verbose:
+                            print(f"resultStats: key={key}")
+                            print(
+                                tabulate(
+                                    kdata["Stats"],
+                                    headers="keys",
+                                    tablefmt="psql",
+                                )
+                            )
+
+    # remove: f"{name}-Axi-cellcenters-all.csv"
+    os.remove(filename)
 
     # display stats
     return datadict
-
-
-def getresultStats(
-    input, name: str, key: str, AttributeMode: str, printed: bool = True
-):
-    """
-    compute stats for key
-
-    in Axi, we cannot use directly DescriptiveStatistics as we need to account for the Jacobian
-    of the transformation Cartesian to Cylindrical
-
-    instead we compute integral
-    """
-
-    print(
-        f"getresultStats: name={name}, key={key}, AttributeMode={AttributeMode}",
-        flush=True,
-    )
-
-    # if field is a vector, create a field for its norm
-
-    # statistics
-    statistics = DescriptiveStatistics(input)
-    # get params list
-    if not printed:
-        for prop in statistics.ListProperties():
-            print(f"DescriptiveStatistics: {prop}={statistics.GetPropertyValue(prop)}")
-    statistics.VariablesofInterest = [key]
-    statistics.AttributeMode = AttributeMode
-    # statistics.UpdatePipeline()
-    # stats_info = statistics.GetDataInformation()
-    # SetActiveSource(statistics)
-
-    spreadSheetView = CreateView("SpreadSheetView")
-    descriptiveStatisticsDisplay = Show(
-        statistics, spreadSheetView, "SpreadSheetRepresentation"
-    )
-    spreadSheetView.Update()
-    export = ExportView(
-        f"{name}-{key}-descriptivestats.csv",
-        view=spreadSheetView,
-        RealNumberNotation="Scientific",
-    )
-
-    # if not printed:
-    #     # get params list
-    #     for prop in export.ListProperties():
-    #         print(f'ExportView: {prop}={export.GetPropertyValue(prop)}')
-
-    # # not working
-    export = CreateWriter(f"{name}-{key}-descriptivestats-create.csv", proxy=statistics)
-    export.FieldAssociation = "Row Data"
-    # get params list
-    if not printed:
-        for prop in export.ListProperties():
-            print(f"CreateWriter: {prop}={export.GetPropertyValue(prop)}")
-    export.UpdateVTKObjects()  # is it needed?
-    export.UpdatePipeline()
-
-    Delete(descriptiveStatisticsDisplay)
-    Delete(statistics)
-    del statistics
-    Delete(spreadSheetView)
-    del spreadSheetView
-
-    csv = createTable(f"{name}-{key}-descriptivestats.csv", key, name)
-
-    return csv
 
 
 def resultHistos(
@@ -772,51 +809,43 @@ def resultHistos(
     Area: float,
     BinCount: int = 10,
     printed: bool = True,
+    show: bool = False,
+    verbose: bool = False,
 ):
     """
     histogram
     """
-    print(f"resultHistos: name={name}", flush=True)
-
-    pointDatatoCellData = PointDatatoCellData(
-        registrationName="CellDatatoPointData", Input=input
-    )
-
-    cellSize1 = CellSize(registrationName="CellSize1", Input=pointDatatoCellData)
-    # Properties modified on cellSize1 for 3D
-    cellSize1.ComputeVertexCount = 0
-    cellSize1.ComputeLength = 0
-    cellSize1.ComputeArea = 1  # for 2D
-    cellSize1.ComputeSum = 0
-    cellSize1.UpdatePipeline()
-    # print(f"cellSize1 CellData: {cellSize1.CellData[:]}")
-
-    cellCenters1 = CellCenters(registrationName="CellCenters1", Input=cellSize1)
-    # Properties modified on cellCenters1
-    cellCenters1.VertexCells = 1
+    print(f"resultHistos: name={name}, Area={Area}, BinCount={BinCount}", flush=True)
 
     spreadSheetView = CreateView("SpreadSheetView")
-    cellCenters1Display = Show(
-        cellCenters1, spreadSheetView, "SpreadSheetRepresentation"
-    )
+    cellCenters1Display = Show(input, spreadSheetView, "SpreadSheetRepresentation")
     spreadSheetView.Update()
+
+    filename = f"{name}-Axi-cellcenters-all.csv"
     ExportView(
-        f"{name}-Axi-cellcenters-all.csv",
+        filename,
         view=spreadSheetView,
         RealNumberNotation="Scientific",
     )
 
-    csv = pd.read_csv("Axi-B-cellcenters.csv")
+    csv = pd.read_csv(filename)
     keys = csv.columns.values.tolist()
-    print(f"read_csv: csv={name}-Axi-B-cellcenters.csv, keys={keys}", flush=True)
+    print(f"read_csv: csv={filename}, keys={keys}", flush=True)
 
-    csv["AxiSurf"] = csv["Points_0"] * csv["Area"] * (2 * pi) / 1.0e-9
-    sum = csv["AxiSurf"].sum()
-    csv["AxiVol"] = csv["AxiSurf"] / sum
-    print(f"Sum(AxiSurf)={sum}")
+    sum = csv["AxiVolume"].sum()
+    csv["AxiVol"] = csv["AxiVolume"] / sum * 100
+    print(f"Area={Area}, sum={sum}")
+
+    # check that sum is roughtly equal to 1
+    # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}')
+    eps = 1.0e-4
+    error = abs(1 - csv["AxiVol"].sum() / 100.0)
+    assert error <= eps, f"Check Sum(Fraction) failed (error={error} > eps={eps})"
+
+    csv.to_csv(filename)
     print(f'Sum(AxiVol)={csv["AxiVol"].sum()}')
 
-    datadict = resultinfo(cellCenters1)
+    datadict = resultinfo(input)
     for datatype in datadict:
         if datatype == "CellData":
             AttributeMode = datadict[datatype]["AttributeMode"]
@@ -826,25 +855,27 @@ def resultHistos(
                     Components = kdata["Components"]
                     bounds = kdata["Bounds"]
                     if bounds[0][0] != bounds[0][1]:
-                        if Components == 1:
-                            plotHistoAxi(
-                                f"{name}-Axi-B-cellcenters.csv", name, key, BinCount
-                            )
+                        keyname = key
+                        if Components > 1:
+                            keyname = f"{key}_Magnitude"
+                        plotHistoAxi(
+                            filename,
+                            name,
+                            keyname,
+                            BinCount,
+                            show=show,
+                            verbose=verbose,
+                        )
 
-    Delete(cellCenters1Display)
     Delete(spreadSheetView)
-    Delete(cellCenters1)
-    Delete(cellSize1)
     del spreadSheetView
-    del cellCenters1
-    del cellSize1
-
-    Delete(pointDatatoCellData)
-    del pointDatatoCellData
 
     # Force a garbage collection
     collected = gc.collect()
-    print(f"Garbage collector: collected {collected} objects.")
+    print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+
+    # remove: f"{name}-Axi-cellcenters-all.csv"
+    os.remove(filename)
 
 
 def getbounds(input):
@@ -884,24 +915,30 @@ def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
     calculator1.ResultArrayName = f"{nkey}_moment{order}"
 
     # check Points_0 for r
-    calculator1.Function = f'Points_0*{key}**{order}")'
+    if order == 1:
+        calculator1.Function = f"coordsX*{key}"
+    else:
+        calculator1.Function = f"coordsX*{key}^{order}"
 
     calculator1.UpdatePipeline()
     return calculator1
 
 
-def integrateKeys(input):
+def integrateKeys(input, name: str, printed: bool = True):
     """
     compute integral of Data over area/volume
 
     to get values use a spreadsheet
     """
 
-    integratevalues = IntegrateVariables(Input=input)
+    integratedvalues = IntegrateVariables(Input=input)
+    if not printed:
+        for prop in integratedvalues.ListProperties():
+            print(f"integratedvalues: {prop}={integratedvalues.GetPropertyValue(prop)}")
 
     spreadSheetView = CreateView("SpreadSheetView")
     descriptiveDisplay = Show(
-        integratevalues, spreadSheetView, "SpreadSheetRepresentation"
+        integratedvalues, spreadSheetView, "SpreadSheetRepresentation"
     )
     spreadSheetView.Update()
     export = ExportView(
@@ -913,16 +950,22 @@ def integrateKeys(input):
     Delete(spreadSheetView)
     del spreadSheetView
     Delete(descriptiveDisplay)
-    Delete(integratevalues)
-    del integratevalues
 
     # Force a garbage collection
     collected = gc.collect()
-    print(f"Garbage collector: collected {collected} objects.")
+    print(f"integrateKeys: Garbage collector: collected {collected} objects.")
+
+    return integratedvalues
 
 
 def meshinfo(
-    input, ComputeStats: bool = True, verbose: bool = False, printed: bool = True
+    input,
+    ComputeStats: bool = True,
+    ComputeHisto: bool = False,
+    BinCount: int = 10,
+    show: bool = False,
+    verbose: bool = False,
+    printed: bool = True,
 ):
     """
     display geometric info from input dataset
@@ -984,34 +1027,90 @@ def meshinfo(
         calculator1.UpdatePipeline()
         return calculator1
 
-    # for vector
-    print("Add Norm for vectors:")
-    calculator = input
-
+    """
+    # does not apply for CellData vector (no coordX)
     for field in input.PointData:
         if field.GetNumberOfComponents() == 3:
             print(
                 f"create {field.Name}norm for {field.Name} PointData vector",
                 flush=True,
             )
-            calculator = createVectorNorm(
-                calculator, field.Name, field.Name, "Point Data"
+            tmp = createVectorNorm(
+                tmp, field.Name, field.Name, "Point Data"
+            )
+    for field in input.CellData:
+        if field.GetNumberOfComponents() == 3:
+            print(f"create norm for {field.Name} CellData vector", flush=True)
+            tmp = createVectorNorm(
+                tmp, field.Name, field.Name, "Cell Data"
+            )
+    """
+
+    def part_integrate(
+        input, name, selected_blocks: list, merge: bool = True, verbose: bool = False
+    ):
+        """
+        compute integral over input
+        """
+        print(f"part_integrate: name={name}")
+
+        # try to add Moment here
+        # convert CellData to PointData
+        cellDatatoPointData = CellDatatoPointData(
+            registrationName="CellDatatoPointData", Input=input
+        )
+        tmp = cellDatatoPointData
+
+        if selected_blocks:
+            extractBlock1 = ExtractBlock(registrationName="insert", Input=tmp)
+            extractBlock1.Selectors = selected_blocks
+            extractBlock1.UpdatePipeline()
+            tmp = extractBlock1
+
+        if merge:
+            mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=tmp)
+            mergeBlocks1.UpdatePipeline()
+            tmp = mergeBlocks1
+
+        drop_keys = []
+        for field in input.PointData:
+            fname = f'"{field.Name}"'
+            if field.GetNumberOfComponents() > 1:
+                fname = f'mag("{field.Name}")'
+                for i in range(field.GetNumberOfComponents()):
+                    drop_keys.append(f"{field.Name}_{i}")
+            for order in range(1, 5):
+                tmp = momentN(tmp, fname, field.Name, order, "Point Data")
+
+        integratedvalues = integrateKeys(tmp, name, printed=False)
+        print(f"IntegratedValues: PointData={integratedvalues.PointData[:]}")
+        print(f"IntegratedValues: FieldData={integratedvalues.FieldData[:]}")
+        drop_keys += ["Point ID", "Points_1", "Points_2", "Points_Magnitude"]
+        csv = pd.read_csv(f"{name}-integrals.csv")
+        csv.drop(columns=drop_keys, inplace=True)
+
+        if verbose:
+            print(
+                tabulate(csv.transpose(), headers="keys", tablefmt="psql"),
+                flush=True,
             )
 
-    for field in input.CellData:
-        if field.GetNumberOfComponents() == 2:
-            print(f"create norm for {field.Name} CellData vector", flush=True)
-            calculator = createVectorNorm(
-                calculator, field.Name, field.Name, "Cell Data"
-            )
-            # cannot create Ur and Ut for CellData vector, apply only to PointData vector
+        Delete(cellDatatoPointData)
+        del cellDatatoPointData
+        return csv
+
+    # PointData to CellData
+    pointDatatoCellData = PointDatatoCellData(
+        registrationName="PointDatatoCellData", Input=input
+    )
 
     print("Get mesh size")
-    cellsize = CellSize(calculator)  # input
+    cellsize = CellSize(pointDatatoCellData)  # input
 
     # set some params
     cellsize.ComputeLength = 0
-    cellsize.ComputeArea = 0
+    cellsize.ComputeArea = 1
+    cellsize.ComputeVolume = 0
     cellsize.ComputeVertexCount = 0
     cellsize.ComputeSum = 1
     # get params list
@@ -1021,34 +1120,59 @@ def meshinfo(
 
     # apply
     cellsize.UpdatePipeline()
-    dataInfo = info(cellsize)
 
-    dataset = sm.Fetch(cellsize)
+    cellcenters = CellCenters(registrationName="CellCenters", Input=cellsize)
+    # Properties modified on cellCenters1
+    cellcenters.VertexCells = 1
+    cellcenters.UpdatePipeline()
+
+    # Add Volume
+    calculator1 = Calculator(registrationName=f"AxiVolume", Input=cellcenters)
+    calculator1.AttributeType = "Point Data"
+    calculator1.ResultArrayName = f"AxiVolume"
+    calculator1.Function = f"2*{pi}*coordsX*Area"
+    calculator1.UpdatePipeline()
+
+    dataInfo = info(calculator1)
+    dataset = sm.Fetch(calculator1)
     np_dataset = dsa.WrapDataObject(dataset)
 
     blockdata = {}
     # check dataset type
+    print(f"type(dataset)={type(dataset)}", flush=True)
     if dataset.IsA("vtkUnstructuredGrid"):
         print("UnstructuredGrid")
+        block = dataset
     elif dataset.IsA("vtkMultiBlockDataSet"):
         print("MultiBlockDataSet")
         block = dataset.GetBlock(0)
-        Area_data = block.GetCellData().GetArray("Area")
-        # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
-        Area = block.GetFieldData().GetArray("Area")
-        # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
-        np_Area = np_dataset.FieldData["Area"]
-        # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
-        print(
-            f"block fieldData[np_Area]: total={algs.sum(np_Area)}, parts={algs.shape(np_Area)}"
-        )
 
+    Area_data = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
+    Area = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
+    np_Area = np_dataset.PointData["AxiVolume"]
+    # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
+    tvol = algs.sum(np_Area)
+    vunits = fieldunits["Volume"]["Units"]
+    mm3 = f"{vunits[1]:~P}"
+    tvol_mm3 = convert_data(
+        {"Volume": vunits},
+        tvol,
+        "Volume",
+    )
+    print(
+        f"block fieldData[np_Area]: total={tvol_mm3} {mm3}, parts={algs.shape(np_Area)}"
+    )
+
+    if dataset.IsA("vtkMultiBlockDataSet"):
         hierarchy = dataInfo.GetHierarchy()
         rootnode = hierarchy.GetRootNode()
         rootSelector = f"/{hierarchy.GetRootNodeName()}"
         blocks = hierarchy.GetNumberOfChildren(rootnode)
         print(f"Load blocks: {blocks}")
 
+        sum_vol = 0
         for i in range(blocks):
             child = hierarchy.GetChild(rootnode, i)
             name = hierarchy.GetNodeName(child)
@@ -1058,41 +1182,151 @@ def meshinfo(
 
             nodes = child_info.GetNumberOfPoints()
             cells = child_info.GetNumberOfCells()
-            print(
-                f"block[{i}]: {name}, nodes={nodes}, cells={cells}, vol={np_Area.Arrays[i][0]}"
+            bounds = child_info.GetBounds()
+
+            vol = np_Area.Arrays[i][0]
+            vol_mm3 = convert_data(
+                {"Volume": vunits},
+                vol,
+                "Volume",
             )
+
+            # do not print volumes since they are wrong for unknown reason
+            print(
+                f"block[{i}]: {name}, nodes={nodes}, cells={cells}, bounds={bounds}"
+            )  # vol={vol_mm3} {mm3},
 
             blockdata[rootChild] = {
                 "name": name,
+                "bounds": bounds,
                 "nodes": nodes,
                 "cells": cells,
-                "Area": np_Area.Arrays[i][0],
+                "Area": vol,
             }
+
+            sum_vol += vol
+
+        # # check tvol == Sum(vol)
+        # if abs(1 - sum_vol / tvol) > 1.0e-3:
+        #     print(f"Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %")
 
         # Compute Stats
         stats = []
 
         print("Data ranges:", flush=True)
-        resultinfo(cellsize, verbose)
+        resultinfo(calculator1, verbose)
+        Delete(pointDatatoCellData)
+        del pointDatatoCellData
+
+        # Force a garbage collection
+        collected = gc.collect()
+        print(f"meshinfo: Garbage collector: collected {collected} objects.")
 
         print("Data ranges without Air:", flush=True)
-        extractBlock1 = ExtractBlock(registrationName="insert", Input=cellsize)
-        extractBlock1.Selectors = [
-            block for block in blockdata.keys() if not "Air" in block
-        ]
+        selected_blocks = [block for block in blockdata.keys() if not "Air" in block]
+
+        # TODO: need to restart from input and apply ... Calculator1
+        extractBlock1 = ExtractBlock(registrationName="insert", Input=input)
+        extractBlock1.Selectors = selected_blocks
         extractBlock1.UpdatePipeline()
-        Areas = [blockdata[block]["Area"] for block in extractBlock1.Selectors]
         mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
         mergeBlocks1.UpdatePipeline()
 
-        statsdict = resultStats(mergeBlocks1, "insert", sum(Areas))
-        resultHistos(mergeBlocks1, "insert", sum(Areas), BinCount=20)
+        def part(
+            pinput,
+            name: str,
+            computeHisto: bool,
+            BinCount: int = 20,
+            show: bool = False,
+            verbose: bool = False,
+        ):
+            pointDatatoCellData = PointDatatoCellData(pinput)
+            cellsize = CellSize(pointDatatoCellData)
+            # set some params
+            cellsize.ComputeLength = 0
+            cellsize.ComputeArea = 1
+            cellsize.ComputeVolume = 0
+            cellsize.ComputeVertexCount = 0
+            cellsize.ComputeSum = 1
+            cellsize.UpdatePipeline()
 
+            cellcenters = CellCenters(registrationName="CellCenters", Input=cellsize)
+            # Properties modified on cellCenters1
+            cellcenters.VertexCells = 1
+            cellcenters.UpdatePipeline()
+
+            # Add Volume
+            calculator1 = Calculator(registrationName=f"AxiVolume", Input=cellcenters)
+            calculator1.AttributeType = "Point Data"
+            calculator1.ResultArrayName = f"AxiVolume"
+            calculator1.Function = f"2*{pi}*coordsX*Area"
+            calculator1.UpdatePipeline()
+
+            dataset = sm.Fetch(calculator1)
+            np_dataset = dsa.WrapDataObject(dataset)
+            print(f"type(dataset)={type(dataset)}", flush=True)
+            if dataset.IsA("vtkUnstructuredGrid"):
+                print("UnstructuredGrid", flush=True)
+                block = dataset  # .GetBlock(0)
+            elif dataset.IsA("vtkPolyData"):
+                print("vtkPolyData", flush=True)
+                block = dataset  # .GetBlock(0)
+            elif dataset.IsA("vtkMultiBlockDataSet"):
+                print("MultiBlockDataSet", flush=True)
+                block = dataset.GetBlock(0)
+
+            Area_data = block.GetPointData().GetArray("AxiVolume")
+            # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
+            Area = block.GetPointData().GetArray("AxiVolume")
+            # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
+            np_Area = np_dataset.PointData["AxiVolume"]
+            # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
+            vol = algs.sum(np_Area)
+            vunits = fieldunits["Volume"]["Units"]
+            mm3 = f"{vunits[1]:~P}"
+            vol_mm3 = convert_data(
+                {"Volume": vunits},
+                vol,
+                "Volume",
+            )
+            print(
+                f"{name}: block fieldData[np_Area]: vol={vol_mm3} {mm3}, parts={algs.shape(np_Area)}"
+            )
+
+            # # check tvol == Sum(vol)
+            # if abs(1 - vol / tvol) > 1.0e-3:
+            #     print(f"insert Total volume != vol(insert), tvol={tvol}, vol={vol}, error={abs(1-vol/tvol)*100} %")
+
+            statsdict = resultStats(calculator1, name, tvol, verbose)
+            # print(f"insert statsdict: {statsdict}", flush=True)
+            if ComputeHisto:
+                resultHistos(
+                    calculator1,
+                    name,
+                    vol,
+                    BinCount=BinCount,
+                    show=show,
+                    verbose=verbose,
+                )
+
+            stats.append(statsdict)
+
+            Delete(pointDatatoCellData)
+            del pointDatatoCellData
+
+            # Force a garbage collection
+            collected = gc.collect()
+            print(f"part: Garbage collector: collected {collected} objects.")
+
+            return vol, statsdict
+
+        vol, statsdict = part(mergeBlocks1, "insert", ComputeHisto, BinCount)
         stats.append(statsdict)
-        extractBlock1.UpdatePipeline()
-        Delete(extractBlock1)
-        del extractBlock1
 
+        icsv = part_integrate(
+            input, "insert", selected_blocks, merge=True, verbose=True
+        )
+        print(f'insert: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}')
         # aggregate stats data
         createStatsTable([statsdict], "insert")
 
@@ -1100,26 +1334,47 @@ def meshinfo(
             return cellsize, blockdata, statsdict
 
         print("Data ranges per block:", flush=True)
+        sum_vol = 0
         for i, block in enumerate(blockdata.keys()):
             name = blockdata[block]["name"]
             print(f"block[{i}]: extract {block}, name={name}", flush=True)
-            extractBlock1 = ExtractBlock(registrationName=name, Input=cellsize)
+            # TODO: need to restart from input and apply ... Calculator1
+            extractBlock1 = ExtractBlock(registrationName=name, Input=input)
             extractBlock1.Selectors = [block]
             extractBlock1.UpdatePipeline()
-            statsdict = resultStats(extractBlock1, name, blockdata[block]["Area"])
-            resultHistos(mergeBlocks1, name, blockdata[block]["Area"], BinCount=20)
+
+            vol, statsdict = part(extractBlock1, name, ComputeHisto, BinCount)
+            sum_vol += vol
+
+            icsv = part_integrate(input, name, [block], merge=False, verbose=True)
+            print(
+                f'name={name}: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}'
+            )
 
             stats.append(statsdict)
             Delete(extractBlock1)
             del extractBlock1
 
-            # for testing purpose only
-            # if i == 1:
-            #     break
+            # Force a garbage collection
+            collected = gc.collect()
+            print(f"loopblock: Garbage collector: collected {collected} objects.")
 
-        createStatsTable(stats, name)
+            # aggregate stats data
+            createStatsTable([statsdict], name)
 
-    return cellsize, blockdata
+        # check tvol == Sum(vol)
+        print(
+            f"reworked Total volume: tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %"
+        )
+        if abs(1 - sum_vol / tvol) > 1.0e-3:
+            print(
+                f"reworked Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %"
+            )
+
+        # aggregate stats data
+        createStatsTable(stats, "total")
+
+    return input, blockdata, dict()
 
 
 def deformed(input, factor: float = 1, printed: bool = True):
@@ -1136,77 +1391,11 @@ def deformed(input, factor: float = 1, printed: bool = True):
         for prop in warpByVector1.ListProperties():
             print(f"warpByVector1: {prop}={warpByVector1.GetPropertyValue(prop)}")
 
-    warpByVector1.UpdatePipeline()
+    UpdatePipeline()
     return warpByVector1
 
 
 ################################################################
-def setCamera(
-    renderView,
-    Up: tuple = None,
-    Angle: float = 30,
-    pProjection: bool = True,
-    roll: float = 0,
-    elevation: float = 0,
-    azimuth: float = 0,
-):
-    """
-    adapt camera settings
-
-    ref:
-    https://docs.paraview.org/en/latest/ReferenceManual/customizingParaView.html#camera-settings
-    https://docs.paraview.org/en/latest/Tutorials/ClassroomTutorials/pythonAndBatchParaViewAndPython.html#control-the-camera
-    """
-
-    renderView.ResetCamera()
-    camera = renderView.GetActiveCamera()
-
-    if Up is not None:
-        # Set
-        position = camera.GetPosition()
-        focalPoint = camera.GetFocalPoint()
-        viewDir = (
-            position[0] - focalPoint[0],
-            position[1] - focalPoint[1],
-            position[2] - focalPoint[2],
-        )
-        print(
-            f"Reset view: viewDir={viewDir}, viewUp={Up}, viewAngle={Angle}", flush=True
-        )
-        camera.SetViewUp(Up[0], Up[1], Up[2])
-        camera.SetViewAngle(Angle)
-        camera.SetParallelProjection(pProjection)
-        if pProjection:
-            camera.SetParallelScale(1)
-
-        print(f"Adjust Camera: Roll={roll}, Elevation={elevation}", flush=True)
-        camera.Roll(roll)  # rotate around ??
-        # camera.Yaw(45)   # rotate around ??
-        # camera.Pitch(45) # rotate around ??
-        # camera.Azimuth(45) # rotate around viewUp?
-        camera.Elevation(elevation)  # rotate around perpendicular viewUp x Oz?
-
-    else:
-        camera.OrthogonalizeViewUp()
-        camera.Azimuth(azimuth)
-
-    renderView.Update()
-    camera = renderView.GetActiveCamera()
-    position = camera.GetPosition()
-    focalPoint = camera.GetFocalPoint()
-    viewUp = camera.GetViewUp()
-    viewAngle = camera.GetViewAngle()
-    parallelProjection = camera.GetParallelProjection()
-    print(f"position: {position}", flush=True)
-    print(f"focalPoint: {focalPoint}", flush=True)
-    print(f"viewUp: {viewUp}", flush=True)
-    print(f"viewAngle: {viewAngle}", flush=True)
-    print(f"parallelProjection: {parallelProjection}", flush=True)
-    print(f"Roll: {camera.GetRoll()}", flush=True)
-
-    # print(f"help={dir(camera)}")
-
-
 def displayField(
     input,
     selectedblocks: list,
@@ -1215,27 +1404,12 @@ def displayField(
     addruler: bool = True,
     renderView=None,
     filename: str = None,
-    viewUp: tuple = None,
-    viewAngle: float = 30,
-    parallelProjection: bool = False,
-    roll: float = 0,
-    elevation: float = 0,
-    azimuth: float = 0,
     comment: str = None,
     grid: bool = False,
-    polargrid: bool = False,
     printed: bool = True,
 ):
     """
     display field in renderview
-
-    Azimuth - rotate around the vertical axis.
-    Elevation - rotate around the horizontal axis in the plane of the screen.
-    Roll - rotate around the axis coming out of the screen.
-    View angle - basically a zoom in.
-    Camera position - where the camera is.
-    Focal point - where the camera is looking.
-    View Up - I don't know what this is (default = (0, 1, 0) for 3D, view from +Oz)
 
     TODO: eventually add an annotation
     """
@@ -1263,12 +1437,12 @@ def displayField(
     display.ColorArrayName = color
     if grid:
         display.DataAxesGrid.GridAxesVisibility = 1
-    if polargrid:
-        display.PolarAxes.Visibility = 1
-        display.PolarAxes.MaximumAngle = 360.0
 
     # for vector: ColorBy(display, ('CELLS', 'magnetic_field', 'Z'))
     ColorBy(display, tuple(color))
+
+    renderView.ResetCamera()
+    renderView.GetActiveCamera()
 
     # Add BoundingRuler filter to get an idea of the dimension
     if addruler:
@@ -1279,10 +1453,6 @@ def displayField(
             for prop in ruler.ListProperties():
                 print(f"ruler: {prop}={ruler.GetPropertyValue(prop)}")
         Show(ruler, renderView)  # Reset Camera
-
-    setCamera(
-        renderView, viewUp, viewAngle, parallelProjection, roll, elevation, azimuth
-    )  # adjustCamera)
 
     resolution = [1200, 1200]
     renderView.ViewSize = resolution
@@ -1312,7 +1482,14 @@ def displayField(
     LUTColorBar = GetScalarBar(LUT)
     # LUTColorBar.Position = [0.9118075801749271, 0.01059135039717564]
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -1383,40 +1560,36 @@ def makeAxiview(
     """
     create a 2D view
     """
-    print(f"make2Dview: field={field}", end="")
+    print(f"makeAxiview: field={field}", end="")
     if suffix:
         print(f", suffix={suffix}", end="")
     print(flush=True)
     print(f"blockdata={blockdata}", flush=True)
 
-    (physic, fieldname) = key.split(".")
+    keyinfo = field.split(".")
+    # print(f"keyinfo={keyinfo}", flush=True)
+    if len(keyinfo) == 2:
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     selectedblocks = selectBlocks(
         list(blockdata.keys()), fieldunits[fieldname]["Exclude"]
     )
-    print(f"input.Selectors = {selectedblocks}", flush=True)
+    if selectedblocks:
+        print(f"input.Selectors = {selectedblocks}", flush=True)
 
     filename = f"{field}.png"
     if suffix is not None:
-        filename = f"{field}-{suffix}.png"
+        filename = f"{field}{suffix}.png"
 
     renderView = displayField(
-        input,
-        selectedblocks,
-        field,
-        color,
-        addruler=addruler,
-        filename=filename,
-        viewUp=(0, 1, 0),
-        viewAngle=30,
-        parallelProjection=False,
-        roll=90,
-        elevation=300,
+        input, selectedblocks, field, color, addruler=addruler, filename=filename
     )
 
-    Delete(boxclip)
-    del boxclip
     Delete(renderView)
     del renderView
 
@@ -1436,6 +1609,10 @@ def plotOr(
     [r0, r1] = r
 
     plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
+    # get params list
+    if not printed:
+        for prop in plotOverLine.ListProperties():
+            print(f"plotOverLine': {prop}={plotOverLine.GetPropertyValue(prop)}")
 
     # init the 'Line' selected for 'Source'
     plotOverLine.Source.Point1 = [r0, z, 0]
@@ -1456,12 +1633,19 @@ def plotOr(
         from matplotlib.ticker import MaxNLocator
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        (physic, fieldname) = key.split(".")
-        print(f"physic={physic}, fieldname={fieldname}", flush=True)
-        print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
+        keyinfo = key.replace("_Magnitude", "").split(".")
+        # print(f"keyinfo={keyinfo}", flush=True)
+        if len(keyinfo) == 2:
+            (physic, fieldname) = keyinfo
+        elif len(keyinfo) == 3:
+            (toolbox, physic, fieldname) = keyinfo
+        else:
+            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        # print(f"physic={physic}, fieldname={fieldname}", flush=True)
+        # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
         symbol = fieldunits[fieldname]["Symbol"]
         [in_unit, out_unit] = fieldunits[fieldname]["Units"]
-        print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
+        # print(f"in_units={in_unit}, out_units={out_unit}", flush=True)
 
         if ax is None:
             ax = plt.gca()
@@ -1539,7 +1723,14 @@ def plotOz(
         from matplotlib.ticker import MaxNLocator
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        (physic, fieldname) = key.split(".")
+        keyinfo = key.replace("_Magnitude", "").split(".")
+        # print(f"keyinfo={keyinfo}", flush=True)
+        if len(keyinfo) == 2:
+            (physic, fieldname) = keyinfo
+        elif len(keyinfo) == 3:
+            (toolbox, physic, fieldname) = keyinfo
+        else:
+            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
         symbol = fieldunits[fieldname]["Symbol"]
         [in_unit, out_unit] = fieldunits[fieldname]["Units"]
 
@@ -1591,8 +1782,24 @@ parser.add_argument("file", type=str, help="input case file (ex. Export.case)")
 parser.add_argument("--field", type=str, help="select field to display", default="")
 parser.add_argument("--stats", help="activate stats calculations", action="store_true")
 parser.add_argument(
+    "--histos", help="activate histograms calculations", action="store_true"
+)
+parser.add_argument("--bins", type=int, help="set bins number (default 10)", default=10)
+parser.add_argument("--plots", help="activate plots calculations", action="store_true")
+parser.add_argument("--views", help="activate views calculations", action="store_true")
+parser.add_argument(
+    "--channels", help="activate views calculations", action="store_true"
+)
+parser.add_argument("--r", nargs="*", type=float, help="select r in m to display")
+parser.add_argument("--z", nargs="*", type=float, help="select z in m to display")
+parser.add_argument(
     "--save",
     help="save graphs",
+    action="store_true",
+)
+parser.add_argument(
+    "--verbose",
+    help="activate verbose mode",
     action="store_true",
 )
 
@@ -1609,6 +1816,8 @@ print(f"args: {args}")
 # check paraview version
 version = GetParaViewVersion()
 print(f"Paraview version: {version}")
+
+cwd = os.getcwd()
 
 # args.file = "../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case"
 reader = load(args.file)
@@ -1633,44 +1842,109 @@ if args.field:
 
 
 # get Block info
-cellsize, blockdata, statsdict = meshinfo(reader, ComputeStats=args.stats)
+cellsize, blockdata, statsdict = meshinfo(
+    reader,
+    ComputeStats=args.stats,
+    ComputeHisto=args.histos,
+    BinCount=args.bins,
+    show=(not args.save),
+    verbose=args.verbose,
+)
 
 # create 3D view
-if not args.field:
-    key = None
-    for vkey in list(reader.PointData.keys()):
-        if not vkey in ignored_keys:
-            key = vkey
-            break
+print(f"reader: PointData={list(reader.PointData.keys())}")
+print(f"reader: CellData={list(reader.CellData.keys())}")
 
-    field = reader.PointData[key]
-    color = ["POINTS", key]
-    print(f"force field to {key}", flush=True)
-
-# make3Dview(cellsize, blockdata, key, color, addruler=True)
 
 # deformed view
-geometry = deformed(cellsize, factor=1)
+suffix = ""
+found = False
+for field in list(reader.PointData.keys()):
+    if field.endswith("displacement"):
+        found = True
+        break
+print(f"displacement found={found} in {list(reader.PointData.keys())}")
 
-# compute channel deformation
-# use MeshLib see test-meshlib example
-for i, block in enumerate(blockdata.keys()):
-    name = blockdata[block]["name"]
-    actual_name = name.replace("/root/", "")
-    if actual_name.startswith("H") and not actual_name.endswith("Isolant"):
-        extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
-        extractBlock1.Selectors = [block]
-        extractBlock1.UpdatePipeline()
-        extractSurface1 = ExtractSurface(
-            registrationName="ExtractSurface1", Input=extractBlock1
-        )
+if found:
+    # make3Dview(cellsize, blockdata, key, color, addruler=True)
+    if args.channels:
+        # compute channel deformation
+        # use MeshLib see test-meshlib example
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            if actual_name.startswith("H") and not actual_name.endswith("Isolant"):
+                extractBlock1 = ExtractBlock(registrationName=name, Input=reader)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
 
-        SaveData(f"{actual_name}-deformed.stl", proxy=extractSurface1)
-        Delete(extractBlock1)
-        del extractBlock1
+                SaveData(f"{actual_name}.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
 
+    geometry = deformed(cellsize, factor=1, printed=False)
+    info(geometry)
 
-makeAxiview(geometry, blockdata, key, color, suffix="deformed", addruler=False)
+    # compute channel deformation
+    # use MeshLib see test-meshlib example
+    if args.channels:
+        print("Save stl for deformed geometries:")
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            actual_name = name.replace("/root/", "")
+            print(f"\t{name}: actual_name={actual_name}", end="")
+            if not actual_name.endswith("Isolant") and not "Air" in actual_name:
+                print(" saved", flush=True)
+                extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
+                extractBlock1.Selectors = [block]
+                extractBlock1.UpdatePipeline()
+                extractSurface1 = ExtractSurface(
+                    registrationName="ExtractSurface1", Input=extractBlock1
+                )
+
+                SaveData(f"{cwd}/{actual_name}-deformed.stl", proxy=extractSurface1)
+                Delete(extractBlock1)
+                del extractBlock1
+            else:
+                print(" ignored", flush=True)
+    suffix = "-deformed"
+    cellsize = geometry
+
+if args.plots:
+    print(f"plots: r={args.r}, z={args.z}")
+    # plotOr(reader, r, z, show=(not args.save))# with r=[r1, r2], z: float
+    # plotOz(reader, r, z, show=(not args.save)) # with r: float, z=[z1,z2]
+
+if args.views:
+    if not args.field:
+        for vkey in list(cellsize.PointData.keys()):
+            if not vkey in ignored_keys:
+                color = ["POINTS", vkey]
+                makeAxiview(
+                    cellsize,
+                    blockdata,
+                    vkey,
+                    color,
+                    suffix="deformed",
+                    addruler=False,
+                )
+        for vkey in list(cellsize.CellData.keys()):
+            if not vkey in ignored_keys:
+                color = ["CELLS", vkey]
+                makeAxiview(
+                    cellsize, blockdata, vkey, color, suffix="deformed", addruler=False
+                )
+    else:
+        if args.key in cellsize.PointData.keys():
+            color = ["POINTS", args.key]
+        elif args.key in cellsize.CellData.keys():
+            color = ["CELLS", args.key]
+            makeAxiview(
+                cellsize, blockdata, args.key, color, suffix="deformed", addruler=False
+            )
 
 # for magnetfield:
 #   - view contour for magnetic potential (see pv-contours.py)
