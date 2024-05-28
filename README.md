@@ -2,7 +2,7 @@
 
 This directory contains scripts useful for post-processing feelpp results with Paraview
 
-`pv-statistics`:
+## `pv-statistics`:
 
 * get range per PointData, CellData
 * compute stats per PointData, CellData for insert
@@ -13,14 +13,17 @@ This directory contains scripts useful for post-processing feelpp results with P
 All data file are saved in csv format for other use.
 
 Optional
-* `--field`: select a field, by default get first PointData array
+* `--views`: 
+    * `--field`: select a field, by default get first PointData array
 * `--stats`: 
     * compute stats per PointData, CellData per block (aka `feelpp` marker) 
+* `--histos`: 
     * compute histogram per PointData, CellData per block (aka `feelpp` marker)
-* `--z`: 
-    * display 2D OxOy view for z in `args.z`
-    * `--r`: display theta plot for r in `args.r` and z in `args.z`
-* `--save`: save plots  
+* `--plots`: 
+    * `--z`: 
+       * display 2D OxOy view for z in `args.z`
+       * `--r`: display theta plot for r in `args.r` and z in `args.z`
+    * `--save`: save plots  
  
 examples
 
@@ -29,6 +32,59 @@ python statistics.py --help
 python pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case
 pvbatch pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 --save
 ```
+
+## `pv-statistics2D`:
+
+* for 2D
+
+examples
+
+```bash
+pvbatch pv-statistics2D.py M9Bitters_18MW_thmagel/M9Bi_18MW_elas_laplace_withoutTierod/gradH/Montgomery/Colebrook/np_1/cfpdes.exports/Export.case
+```
+
+All data file are saved in csv format for other use.
+
+Optional
+* `--views`: 
+    * `--field`: select a field, by default get all PointData and CellData array
+    * `--transparent`: make background transparent and fonts black
+    * `--colormap`: use a given colormap 
+* `--stats`: 
+    * compute stats per PointData, CellData per block (aka `feelpp` marker) 
+* `--histos`: 
+    * compute histogram per PointData, CellData per block (aka `feelpp` marker)
+* `--plots`: 
+    * `--theta`: 
+    * `--r`: 
+    * `--save`: save plots  
+
+## `pv-statisticsAxi`:
+
+* for Axi
+
+All data file are saved in csv format for other use.
+
+Optional
+* `--views`: 
+    * `--field`: select a field, by default get all PointData and CellData array
+    * `--transparent`: make background transparent and fonts black
+    * `--colormap`: use a given colormap 
+* `--stats`: 
+    * compute stats per PointData, CellData per block (aka `feelpp` marker) 
+* `--histos`: 
+    * compute histogram per PointData, CellData per block (aka `feelpp` marker)
+* `--plots`: 
+    * `--z`: 
+    * `--r`: 
+    * `--save`: save plots  
+
+examples
+
+```bash
+pvbatch pv-statisticsAxi.py M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_1/np_1/cfpdes.exports/Export.case
+```
+
 
 # Use with matplotlib
 
@@ -108,6 +164,37 @@ for Axi, create a 3D view and apply the rest?
 ExtractSurface then RotationalExtrusion () then Transform (Rotation?) - non cree surface en 3D pour all
 a tester par block
  -->
+
+# With Python virtual env
+
+For Linux/Mac Os X:
+
+```bash
+$ python3 -m venv --system-site-packages hifimagnet-env
+$ source ./hifimagnet-env/bin/activate
+$ pip install -r requirements.txt
+```
+
+# With Docker
+
+Building docker images from python slim docker image.
+
+* standard paraview:
+  * `PYVER python` version to use (default: 3.10) 
+  * `PV_VERSION_MAJOR` paraview major version (eg: 5.12)
+  * `PV_VERSION_MINOR` paraview minor version (eg: 0)
+  * `PV_FLAVOR`
+* headless paraview:
+  * `PV_FLAVOR` specify the paraview flavor to "package". Valid values are: osmesa-MPI, egl-MPI
+
+To build the image:
+
+```bash
+docker build ...
+```
+
+# With Singularity
+
 # References
 
 - [feelpp](https://docs.feelpp.org/home/index.html)
