@@ -1,5 +1,5 @@
 {
-	"name": "MagnetWorkflow Project",
+	"name": "HiFiMagnet Paraview Project",
 	"dockerFile": "Dockerfile",
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
@@ -24,17 +24,16 @@
 	"customizations": {
 		"settings": {
 			"terminal.integrated.defaultProfile.linux": "bash",
-			"python.defaultInterpreterPath": "/usr/bin/python",
-			"python.formatting.autopep8Path": "/usr/bin/autopep8",
-			"python.formatting.blackPath": "/usr/bin/black",
-			"python.formatting.yapfPath": "/usr/bin/yapf3",
-			"python.linting.banditPath": "/usr/bin/bandit",
-			"python.linting.flake8Path": "/usr/bin/flake8",
-			"python.linting.mypyPath": "/usr/bin/mypy",
-			"python.linting.pycodestylePath": "/usr/bin/pycodestyle",
-			"python.linting.pydocstylePath": "/usr/bin/pydocstyle",
-			"python.linting.pylintPath": "/usr/bin/pylint",
-			"python.testing.pytestPath": "/usr/bin/pytest-3"
+			"python.defaultInterpreterPath": "/usr/local/bin/python",
+			"python.formatting.autopep8Path": "/usr/local/bin/autopep8",
+			"python.formatting.blackPath": "/usr/local/bin/black",
+			"python.linting.banditPath": "/usr/local/bin/bandit",
+			"python.linting.flake8Path": "/usr/local/bin/flake8",
+			"python.linting.mypyPath": "/usr/local/bin/mypy",
+			"python.linting.pycodestylePath": "/usr/local/bin/pycodestyle",
+			"python.linting.pydocstylePath": "/usr/local/bin/pydocstyle",
+			"python.linting.pylintPath": "/usr/local/bin/pylint",
+			"python.testing.pytestPath": "/usr/local/bin/pytest"
 		},
 		// Add the IDs of extensions you want installed when the container is created in the array below.
 		"vscode": {

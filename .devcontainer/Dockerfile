@@ -28,6 +28,9 @@ ARG USERNAME=feelpp
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
+# add python package for python dev
+RUN pip install --upgrade pip && \
+    pip install autopep8 black bandit flake8 mypy pycodestyle pydocstyle pylint pytest
 
 # install Feelpp from BinTray Debian repository
 RUN apt update \
