@@ -639,7 +639,8 @@ def plotHisto(file, name: str, key: str, volume: float, show: bool = True):
     units = {fieldname: fieldunits[fieldname]["Units"]}
     values = csv["bin_extents"].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv = csv.assign(bin_extents=out_values)  # [f"{val:.3f}" for val in out_values])
+    # csv = csv.assign(bin_extents=out_values)
+    csv = csv.assign(bin_extents=[f"{val:.3f}" for val in out_values])
     csv["Volume_total"] = csv["Volume_total"] / volume * 100
 
     csv.plot.bar(
@@ -657,7 +658,7 @@ def plotHisto(file, name: str, key: str, volume: float, show: bool = True):
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
     ax.yaxis.set_major_formatter(lambda x, pos: f"{x:.1f}")
-    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
+    # ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
     show = False
     if show:
         plt.show()
@@ -925,6 +926,8 @@ def getresultHisto(
     Components: int = 1,
     BinCount: int = 10,
     printed: bool = True,
+    show: bool = False,
+    verbose: bool = False,
 ):
     """
     histogram
@@ -939,7 +942,10 @@ def getresultHisto(
             return
     """
 
-    print(f"getresultHisto: name={name}, key={key}, TypeMode={TypeMode}", flush=True)
+    print(
+        f"getresultHisto: name={name}, key={key}, TypeMode={TypeMode}, Compoents={Components}, BinCount={BinCount}, show={show}",
+        flush=True,
+    )
 
     # convert pointdata to celldata
     if TypeMode == "POINT":
@@ -984,7 +990,8 @@ def getresultHisto(
     # Properties modified on histogram1
     histogram1.CalculateAverages = 1
 
-    export = CreateWriter(f"{name}-{key}-histogram.csv", proxy=histogram1)
+    filename = f"{name}-{key}-histogram.csv"
+    export = CreateWriter(filename, proxy=histogram1)
     if not printed:
         for prop in export.ListProperties():
             print(f"export: {prop}={export.GetPropertyValue(prop)}")
@@ -993,10 +1000,10 @@ def getresultHisto(
     Delete(histogram1)
     del histogram1
 
-    plotHisto(f"{name}-{key}-histogram.csv", name, key, volume, show=show)
+    plotHisto(filename, name, key, volume, show=show)
 
     # remove temporary csv files
-    os.remove(f"{name}-{key}-histogram.csv")
+    # os.remove(filename)
 
     if TypeMode == "POINT":
         Delete(pointDatatoCellData)

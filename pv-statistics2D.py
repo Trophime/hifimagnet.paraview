@@ -686,7 +686,8 @@ def plotHisto(
     units = {fieldname: fieldunits[fieldname]["Units"]}
     values = csv["bin_extents"].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv = csv.assign(bin_extents=out_values)  # [f"{val:.2f}" for val in out_values])
+    # csv = csv.assign(bin_extents=out_values)
+    csv = csv.assign(bin_extents=[f"{val:.2f}" for val in out_values])
     csv["Area_total"] = csv["Area_total"] / Area * 100
 
     csv.plot.bar(
@@ -704,7 +705,7 @@ def plotHisto(
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
     ax.yaxis.set_major_formatter(lambda x, pos: f"{x:.1f}")
-    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
+    # ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
     show = False
     if show:
         plt.show()
@@ -981,6 +982,7 @@ def getresultHisto(
     BinCount: int = 10,
     printed: bool = True,
     verbose: bool = False,
+    show: bool = False,
 ):
     """
     histogram
@@ -1039,10 +1041,10 @@ def getresultHisto(
     Delete(histogram1)
     del histogram1
 
-    plotHisto(filename, name, key, Area)
+    plotHisto(filename, name, key, Area, show=show, verbose=verbose)
 
     # remove temporary csv files
-    os.remove(filename)
+    # os.remove(filename)
 
     if TypeMode == "POINT":
         Delete(pointDatatoCellData)

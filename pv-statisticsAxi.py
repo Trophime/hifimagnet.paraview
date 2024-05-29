@@ -534,7 +534,8 @@ def plotHistoAxi(
     units = {fieldname: fieldunits[fieldname]["Units"]}
     values = csv[key].to_list()
     out_values = convert_data(units, values, fieldname)
-    csv[key] = out_values  # [f"{val:.2f}" for val in out_values]
+    # csv[key] = out_values
+    csv[key] = [f"{val:.3f}" for val in out_values]
 
     counts, extend_bins, patches = hist(csv[key], bins=BinCount, weights=csv["AxiVol"])
     print(f"counts={counts}")
@@ -552,7 +553,7 @@ def plotHistoAxi(
     # if legend is mandatory, set legend to True above and comment out the following line
     # ax.legend([rf"{symbol}[{out_unit:~P}]"])
     ax.yaxis.set_major_formatter(lambda x, pos: f"{x:.1f}")
-    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.2f}")
+    # ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.3f}")
     show = False
     if show:
         plt.show()
@@ -875,7 +876,7 @@ def resultHistos(
     print(f"resultsHistos: Garbage collector: collected {collected} objects.")
 
     # remove: f"{name}-Axi-cellcenters-all.csv"
-    os.remove(filename)
+    # os.remove(filename)
 
 
 def getbounds(input):
