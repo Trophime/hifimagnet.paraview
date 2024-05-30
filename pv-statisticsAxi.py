@@ -670,10 +670,11 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
     """
 
     datadict = resultinfo(input, verbose)
-    print(
-        f'resultStats[{name}]: datadict={datadict["PointData"]["Arrays"].keys()}',
-        flush=True,
-    )
+    if verbose:
+        print(
+            f'resultStats[{name}]: datadict={datadict["PointData"]["Arrays"].keys()}',
+            flush=True,
+        )
     PointData_keys = list(datadict["PointData"]["Arrays"].keys())
 
     spreadSheetView = CreateView("SpreadSheetView")
@@ -689,7 +690,7 @@ def resultStats(input, name: str, Area: float, verbose: bool = False):
 
     csv = pd.read_csv(filename)
     keys = csv.columns.values.tolist()
-    print(f"read_csv: csv={filename}, keys={keys}", flush=True)
+    # print(f"read_csv: csv={filename}, keys={keys}", flush=True)
 
     PointData_keys = []
     for item in input.PointData[:]:
@@ -831,11 +832,11 @@ def resultHistos(
 
     csv = pd.read_csv(filename)
     keys = csv.columns.values.tolist()
-    print(f"read_csv: csv={filename}, keys={keys}", flush=True)
+    # print(f"read_csv: csv={filename}, keys={keys}", flush=True)
 
     sum = csv["AxiVolume"].sum()
     csv["AxiVol"] = csv["AxiVolume"] / sum * 100
-    print(f"Area={Area}, sum={sum}")
+    # print(f"Area={Area}, sum={sum}")
 
     # check that sum is roughtly equal to 1
     # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}')
@@ -844,7 +845,7 @@ def resultHistos(
     assert error <= eps, f"Check Sum(Fraction) failed (error={error} > eps={eps})"
 
     csv.to_csv(filename)
-    print(f'Sum(AxiVol)={csv["AxiVol"].sum()}')
+    # print(f'Sum(AxiVol)={csv["AxiVol"].sum()}')
 
     datadict = resultinfo(input)
     for datatype in datadict:
@@ -873,7 +874,8 @@ def resultHistos(
 
     # Force a garbage collection
     collected = gc.collect()
-    print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+    if verbose:
+        print(f"resultsHistos: Garbage collector: collected {collected} objects.")
 
     # remove: f"{name}-Axi-cellcenters-all.csv"
     # os.remove(filename)
@@ -914,6 +916,7 @@ def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
     calculator1 = Calculator(registrationName=f"moment{order}", Input=input)
     calculator1.AttributeType = AttributeType  # 'Cell Data'
     calculator1.ResultArrayName = f"{nkey}_moment{order}"
+    # print(f"momentN{order}(key={key}, order={order}): {calculator1.ResultArrayName}")
 
     # check Points_0 for r
     if order == 1:
@@ -925,7 +928,7 @@ def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
     return calculator1
 
 
-def integrateKeys(input, name: str, printed: bool = True):
+def integrateKeys(input, name: str, printed: bool = True, verbose: bool = False):
     """
     compute integral of Data over area/volume
 
@@ -938,12 +941,16 @@ def integrateKeys(input, name: str, printed: bool = True):
             print(f"integratedvalues: {prop}={integratedvalues.GetPropertyValue(prop)}")
 
     spreadSheetView = CreateView("SpreadSheetView")
+    spreadSheetView.FieldAssociation = "Cell Data"
+
     descriptiveDisplay = Show(
         integratedvalues, spreadSheetView, "SpreadSheetRepresentation"
     )
+
+    filename = f"{name}-integrals.csv"
     spreadSheetView.Update()
     export = ExportView(
-        f"{name}-integrals.csv",
+        filename,
         view=spreadSheetView,
         RealNumberNotation="Scientific",
     )
@@ -954,9 +961,10 @@ def integrateKeys(input, name: str, printed: bool = True):
 
     # Force a garbage collection
     collected = gc.collect()
-    print(f"integrateKeys: Garbage collector: collected {collected} objects.")
+    if verbose:
+        print(f"integrateKeys: Garbage collector: collected {collected} objects.")
 
-    return integratedvalues
+    return filename
 
 
 def meshinfo(
@@ -1074,21 +1082,49 @@ def meshinfo(
             tmp = mergeBlocks1
 
         drop_keys = []
-        for field in input.PointData:
+        for field in tmp.PointData:
             fname = f'"{field.Name}"'
+            # print(f"fname={fname}, components={field.GetNumberOfComponents()}")
             if field.GetNumberOfComponents() > 1:
                 fname = f'mag("{field.Name}")'
                 for i in range(field.GetNumberOfComponents()):
                     drop_keys.append(f"{field.Name}_{i}")
+                drop_keys.append(f"{field.Name}_Magnitude")
+            else:
+                drop_keys.append(field.Name)
+
             for order in range(1, 5):
                 tmp = momentN(tmp, fname, field.Name, order, "Point Data")
 
-        integratedvalues = integrateKeys(tmp, name, printed=False)
-        print(f"IntegratedValues: PointData={integratedvalues.PointData[:]}")
-        print(f"IntegratedValues: FieldData={integratedvalues.FieldData[:]}")
-        drop_keys += ["Point ID", "Points_1", "Points_2", "Points_Magnitude"]
-        csv = pd.read_csv(f"{name}-integrals.csv")
+        # Add field for AxiVol
+        tmp = Calculator(registrationName=f"AxiVol", Input=tmp)
+        tmp.AttributeType = "Point Data"
+        tmp.ResultArrayName = f"AxiVol"
+        tmp.Function = "coordsX"
+        tmp.UpdatePipeline()
+
+        # print(f"tmp: {tmp.PointData[:]}", flush=True)
+
+        # convert CellData to PointData
+        pointDatatoCellData = PointDatatoCellData(
+            registrationName="PointDatatoCellData", Input=tmp
+        )
+        tmp = pointDatatoCellData
+        # print(f"tmp pointDatatoCellData: {tmp.CellData[:]}", flush=True)
+
+        # get integrated values
+        csvfile = integrateKeys(tmp, name, verbose=verbose)
+        csv = pd.read_csv(csvfile)
+        # print(f"integrateKeys: csv={list(csv.keys())}")
+        drop_keys += ["Cell ID", "Area", "Cell Type"]
+        # print(f"drop_keys={drop_keys}", flush=True)
         csv.drop(columns=drop_keys, inplace=True)
+
+        # divide columns by AxiVol
+        keys = list(csv.keys())  # .remove("AxiVol")
+        for key in csv.keys():
+            if key != "AxiVol":
+                csv[key] = csv[key].div(csv["AxiVol"], axis=0)
 
         if verbose:
             print(
@@ -1098,6 +1134,12 @@ def meshinfo(
 
         Delete(cellDatatoPointData)
         del cellDatatoPointData
+
+        # Force a garbage collection
+        collected = gc.collect()
+        if verbose:
+            print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+
         return csv
 
     # PointData to CellData
@@ -1140,12 +1182,12 @@ def meshinfo(
 
     blockdata = {}
     # check dataset type
-    print(f"type(dataset)={type(dataset)}", flush=True)
+    # print(f"type(dataset)={type(dataset)}", flush=True)
     if dataset.IsA("vtkUnstructuredGrid"):
-        print("UnstructuredGrid")
+        # print("UnstructuredGrid")
         block = dataset
     elif dataset.IsA("vtkMultiBlockDataSet"):
-        print("MultiBlockDataSet")
+        # print("MultiBlockDataSet")
         block = dataset.GetBlock(0)
 
     Area_data = block.GetPointData().GetArray("AxiVolume")
@@ -1221,7 +1263,8 @@ def meshinfo(
 
         # Force a garbage collection
         collected = gc.collect()
-        print(f"meshinfo: Garbage collector: collected {collected} objects.")
+        if verbose:
+            print(f"meshinfo: Garbage collector: collected {collected} objects.")
 
         print("Data ranges without Air:", flush=True)
         selected_blocks = [block for block in blockdata.keys() if not "Air" in block]
@@ -1265,15 +1308,15 @@ def meshinfo(
 
             dataset = sm.Fetch(calculator1)
             np_dataset = dsa.WrapDataObject(dataset)
-            print(f"type(dataset)={type(dataset)}", flush=True)
+            # print(f"type(dataset)={type(dataset)}", flush=True)
             if dataset.IsA("vtkUnstructuredGrid"):
-                print("UnstructuredGrid", flush=True)
+                # print("UnstructuredGrid", flush=True)
                 block = dataset  # .GetBlock(0)
             elif dataset.IsA("vtkPolyData"):
-                print("vtkPolyData", flush=True)
+                # print("vtkPolyData", flush=True)
                 block = dataset  # .GetBlock(0)
             elif dataset.IsA("vtkMultiBlockDataSet"):
-                print("MultiBlockDataSet", flush=True)
+                # print("MultiBlockDataSet", flush=True)
                 block = dataset.GetBlock(0)
 
             Area_data = block.GetPointData().GetArray("AxiVolume")
@@ -1317,17 +1360,65 @@ def meshinfo(
 
             # Force a garbage collection
             collected = gc.collect()
-            print(f"part: Garbage collector: collected {collected} objects.")
+            if verbose:
+                print(f"part: Garbage collector: collected {collected} objects.")
 
             return vol, statsdict
 
         vol, statsdict = part(mergeBlocks1, "insert", ComputeHisto, BinCount)
-        stats.append(statsdict)
 
         icsv = part_integrate(
-            input, "insert", selected_blocks, merge=True, verbose=True
+            input, "insert", selected_blocks, merge=True, verbose=verbose
         )
-        print(f'insert: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}')
+        if verbose:
+            print(f'insert: vol={vol}, ivol={icsv["AxiVol"].to_list()[0] * 2 * pi}')
+        for key, value in statsdict.items():
+            for array, avalue in value["Arrays"].items():
+                if "Stats" in avalue:
+                    keyinfo = array.split(".")
+                    # print(f"keyinfo={keyinfo}", flush=True)
+                    if len(keyinfo) == 2:
+                        (physic, fieldname) = keyinfo
+                    elif len(keyinfo) == 3:
+                        (toolbox, physic, fieldname) = keyinfo
+                    else:
+                        raise RuntimeError(
+                            f"{key}: cannot get keyinfo as splitted char"
+                        )
+
+                    symbol = fieldunits[fieldname]["Symbol"]
+                    msymbol = symbol
+                    if "mSymbol" in fieldunits[fieldname]:
+                        msymbol = fieldunits[fieldname]["mSymbol"]
+                    units = {fieldname: fieldunits[fieldname]["Units"]}
+                    [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                    M = [0] * 5
+                    M[1] = icsv[f"{array}_moment1"].to_list()[0]
+                    M[2] = icsv[f"{array}_moment2"].to_list()[0]
+                    M[3] = icsv[f"{array}_moment3"].to_list()[0]
+                    M[4] = icsv[f"{array}_moment4"].to_list()[0]
+                    avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
+
+                    avalue["Stats"]["Standard Deviation"] = convert_data(
+                        units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                    )
+
+                    for order in range(2, 5):
+                        units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                        if in_unit != ureg.kelvin:
+                            units[f"M{order}"] = [in_unit * order, out_unit * order]
+                        else:
+                            units[f"M{order}"] = [in_unit * order, in_unit * order]
+
+                        avalue["Stats"][f"M{order}"] = convert_data(
+                            units, M[order], f"M{order}"
+                        )
+
+                    # print(f"{array}: {avalue['Stats']}")
+
+        stats.append(statsdict)
+
         # aggregate stats data
         createStatsTable([statsdict], "insert")
 
@@ -1347,10 +1438,57 @@ def meshinfo(
             vol, statsdict = part(extractBlock1, name, ComputeHisto, BinCount)
             sum_vol += vol
 
-            icsv = part_integrate(input, name, [block], merge=False, verbose=True)
-            print(
-                f'name={name}: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}'
-            )
+            icsv = part_integrate(input, name, [block], merge=False, verbose=verbose)
+            if verbose:
+                print(
+                    f'name={name}: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}'
+                )
+
+            # print(f'insert: vol={vol}, ivol={icsv["AxiVol"].to_list()[0] * 2 * pi}')
+            for key, value in statsdict.items():
+                for array, avalue in value["Arrays"].items():
+                    if "Stats" in avalue:
+                        keyinfo = array.split(".")
+                        # print(f"keyinfo={keyinfo}", flush=True)
+                        if len(keyinfo) == 2:
+                            (physic, fieldname) = keyinfo
+                        elif len(keyinfo) == 3:
+                            (toolbox, physic, fieldname) = keyinfo
+                        else:
+                            raise RuntimeError(
+                                f"{key}: cannot get keyinfo as splitted char"
+                            )
+
+                        symbol = fieldunits[fieldname]["Symbol"]
+                        msymbol = symbol
+                        if "mSymbol" in fieldunits[fieldname]:
+                            msymbol = fieldunits[fieldname]["mSymbol"]
+                        units = {fieldname: fieldunits[fieldname]["Units"]}
+                        [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                        M = [0] * 5
+                        M[1] = icsv[f"{array}_moment1"].to_list()[0]
+                        M[2] = icsv[f"{array}_moment2"].to_list()[0]
+                        M[3] = icsv[f"{array}_moment3"].to_list()[0]
+                        M[4] = icsv[f"{array}_moment4"].to_list()[0]
+                        avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
+
+                        avalue["Stats"]["Standard Deviation"] = convert_data(
+                            units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                        )
+
+                        for order in range(2, 5):
+                            units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                            if in_unit != ureg.kelvin:
+                                units[f"M{order}"] = [in_unit * order, out_unit * order]
+                            else:
+                                units[f"M{order}"] = [in_unit * order, in_unit * order]
+
+                            avalue["Stats"][f"M{order}"] = convert_data(
+                                units, M[order], f"M{order}"
+                            )
+
+                        print(f"{array}: {avalue['Stats']}")
 
             stats.append(statsdict)
             Delete(extractBlock1)
@@ -1358,7 +1496,8 @@ def meshinfo(
 
             # Force a garbage collection
             collected = gc.collect()
-            print(f"loopblock: Garbage collector: collected {collected} objects.")
+            if verbose:
+                print(f"loopblock: Garbage collector: collected {collected} objects.")
 
             # aggregate stats data
             createStatsTable([statsdict], name)
@@ -1383,6 +1522,8 @@ def deformed(input, factor: float = 1, printed: bool = True):
     create deformed geometry
     """
     print(f"deformed view: factor={factor}", flush=True)
+    print(f"deformed: input PointData={input.PointData.keys()}")
+    print(f"deformed: input CellData={input.CellData.keys()}", flush=True)
 
     warpByVector1 = WarpByVector(registrationName="WarpByVector1", Input=input)
     warpByVector1.Vectors = ["POINTS", "elasticity.displacement"]
@@ -1392,7 +1533,11 @@ def deformed(input, factor: float = 1, printed: bool = True):
         for prop in warpByVector1.ListProperties():
             print(f"warpByVector1: {prop}={warpByVector1.GetPropertyValue(prop)}")
 
-    UpdatePipeline()
+    warpByVector1.UpdatePipeline()
+    print(f"deformed: warpByVector1 PointData={warpByVector1.PointData.keys()}")
+    print(
+        f"deformed: warpByVector1 CellData={warpByVector1.CellData.keys()}", flush=True
+    )
     return warpByVector1
 
 
@@ -1886,7 +2031,7 @@ if found:
                 Delete(extractBlock1)
                 del extractBlock1
 
-    geometry = deformed(cellsize, factor=1, printed=False)
+    geometry = deformed(reader, factor=1, printed=False)
     info(geometry)
 
     # compute channel deformation
