@@ -1,6 +1,17 @@
+import gc
+import os
 from typing import List
 
-from paraview.simple import OpenDataFile, UpdatePipeline, Calculator
+from paraview.simple import (
+    OpenDataFile,
+    UpdatePipeline,
+    Calculator,
+    IntegrateVariables,
+    CreateView,
+    Show,
+    ExportView,
+    Delete,
+)
 
 from pint import Quantity
 
@@ -187,13 +198,15 @@ def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
     return calculator1
 
 
-def integrateKeys(input, name: str, printed: bool = True, verbose: bool = False):
+def integrateKeys(
+    input, name: str, basedir: str, printed: bool = True, verbose: bool = False
+):
     """
     compute integral of Data over area/volume
 
     to get values use a spreadsheet
     """
-
+    os.makedirs(f"{basedir}/stats", exist_ok=True)
     integratedvalues = IntegrateVariables(Input=input)
     if not printed:
         for prop in integratedvalues.ListProperties():
@@ -206,7 +219,7 @@ def integrateKeys(input, name: str, printed: bool = True, verbose: bool = False)
         integratedvalues, spreadSheetView, "SpreadSheetRepresentation"
     )
 
-    filename = f"{name}-integrals.csv"
+    filename = f"{basedir}/stats/{name}-integrals.csv"
     spreadSheetView.Update()
     export = ExportView(
         filename,

@@ -13,17 +13,8 @@ from paraview.simple import (
     Show,
 )
 
-from pint import Quantity
-
 from .method import convert_data, resultinfo
 from .histo import getresultHisto
-
-# Ignore warning for pint
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
 
 
 def createTable(file: str, key: str, name: str, verbose: bool = False):

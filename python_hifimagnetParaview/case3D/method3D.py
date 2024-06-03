@@ -3,16 +3,6 @@ import json
 import copy
 
 
-from pint import Quantity
-
-# Ignore warning for pint
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
-
-
 def create_dicts(ureg, distance_unit: str, basedir: str):
     fieldunits = {
         "coord": {

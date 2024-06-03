@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import pi, arctan2
 from math import pi, cos, sin
-
-
 from typing import List
 
 from paraview.simple import (

@@ -20,15 +20,6 @@ from paraview.simple import (
 from ..method import convert_data, resultinfo
 from ..view import makeclip, makecylinderslice
 
-from pint import Quantity
-
-# Ignore warning for pint
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
-
 
 def plotOr(
     input,

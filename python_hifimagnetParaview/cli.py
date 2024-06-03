@@ -12,7 +12,6 @@ from paraview.simple import (
 
 from .method import load, info, getbounds, resultinfo
 from .view import deformed
-from .meshinfo import meshinfo
 
 
 pd.options.mode.copy_on_write = True
@@ -42,51 +41,54 @@ def options(description: str, epilog: str):
     parser_3D = subparsers.add_parser("3D", help="3D model")
     parser_2D = subparsers.add_parser("2D", help="2D model")
     parser_Axi = subparsers.add_parser("Axi", help="Axi model")
-    for allparser in [parser_3D, parser_2D, parser_Axi]:
-        allparser.add_argument(
+    for allparsers in [parser_3D, parser_2D, parser_Axi]:
+        allparsers.add_argument(
             "file", type=str, help="input case file (ex. Export.case)"
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--field", type=str, help="select field to display", default=""
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--stats", help="activate stats calculations", action="store_true"
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--histos", help="activate histograms calculations", action="store_true"
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--bins", type=int, help="set bins number (default 10)", default=10
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--plots", help="activate plots calculations", action="store_true"
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--r", nargs="*", type=float, help="select r in m to display"
         )
-        allparser.add_argument(
-            "--theta", nargs="*", type=float, help="select theta in deg to display"
-        )
-        allparser.add_argument(
+        if allparsers != parser_Axi:
+            allparsers.add_argument(
+                "--theta", nargs="*", type=float, help="select theta in deg to display"
+            )
+        if allparsers != parser_2D:
+            allparsers.add_argument(
+                "--channels", help="activate views calculations", action="store_true"
+            )
+            allparsers.add_argument(
+                "--z", nargs="*", type=float, help="select z in m to display"
+            )
+
+        allparsers.add_argument(
             "--save",
             help="save graphs",
             action="store_true",
         )
-        allparser.add_argument(
+        allparsers.add_argument(
             "--verbose",
             help="activate verbose mode",
             action="store_true",
         )
 
-    parser_3D.add_argument(
-        "--channels", help="activate views calculations", action="store_true"
-    )
-    parser_3D.add_argument(
-        "--z", nargs="*", type=float, help="select z in m to display"
-    )
     # TODO get Exports section from json model file
     # data['PostProcess'][method_params[0]]['Exports']['expr']?
     #
@@ -130,13 +132,15 @@ def main():
     # load json
     match args.dimmension:
         case "3D":
-            from .case3D.plot import plotTheta, plotOr
+            from .meshinfo import meshinfo
+            from .case3D.plot import plotTheta, plotOr, plotOz
             from .case3D.display3D import makeview
             from .case3D.method3D import create_dicts
 
             dim = 3
             axis = False
         case "2D":
+            from .meshinfo import meshinfo
             from .case2D.plot import plotTheta, plotOr
             from .case2D.display2D import makeview
             from .case2D.method2D import create_dicts
@@ -144,7 +148,8 @@ def main():
             dim = 2
             axis = False
         case "Axi":
-            from .case2D.plot import plotTheta, plotOr
+            from .meshinfoAxi import meshinfo
+            from .caseAxi.plot import plotOz, plotOr
             from .case2D.display2D import makeview
             from .caseAxi.methodAxi import create_dicts
 
@@ -200,11 +205,15 @@ def main():
     # Plots
     if args.plots:
         if args.r:
-            if dim == 3 and args.z:
+            if axis:
+                print(f"plots: r={args.r}, z={args.z}")
+                # plotOr(reader, r, z, show=(not args.save))# with r=[r1, r2], z: float
+                # plotOz(reader, r, z, show=(not args.save)) # with r: float, z=[z1,z2]
+            elif dim == 3 and args.z:
                 for z in args.z:
                     for r in args.r:
                         plotTheta(cellsize, r, z, show=(not args.save))
-            if dim == 2:
+            elif dim == 2:
                 for r in args.r:
                     plotTheta(cellsize, r, basedir, show=(not args.save))
                     for theta in args.theta:
@@ -223,7 +232,7 @@ def main():
             break
     print(f"displacement found={found} in {list(reader.PointData.keys())}")
 
-    if found and dim == 3:
+    if found and (dim == 3 or axis):
         # make3Dview(cellsize, blockdata, key, color, addruler=True)
         if args.channels:
             print("Save stl for original geometries:")
@@ -276,7 +285,7 @@ def main():
 
         suffix = "-deformed"
         cellsize_deformed = geometry
-    elif found and dim == 2:
+    elif found and dim == 2 and not axis:
         cellsize_deformed = deformed(cellsize, factor=1)
 
         # suffix = "-deformed"

@@ -1,0 +1,569 @@
+import gc
+import pandas as pd
+
+from typing import List
+from tabulate import tabulate
+from math import pi, sqrt
+
+from paraview.simple import (
+    CellSize,
+    ExtractBlock,
+    CellDatatoPointData,
+    Calculator,
+    MergeBlocks,
+    Delete,
+    PointDatatoCellData,
+    CellCenters,
+)
+from paraview import servermanager as sm
+from paraview.vtk.numpy_interface import dataset_adapter as dsa
+from paraview.vtk.numpy_interface import algorithms as algs
+
+from .method import convert_data, info, resultinfo, momentN, integrateKeys
+from .stats import resultStats, createStatsTable
+from .histoAxi import resultHistos
+
+
+def part_integrate(
+    input,
+    name,
+    selected_blocks: list,
+    basedir: str,
+    merge: bool = True,
+    verbose: bool = False,
+):
+    """
+    compute integral over input
+    """
+    print(f"part_integrate: name={name}")
+
+    # try to add Moment here
+    # convert CellData to PointData
+    cellDatatoPointData = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+    tmp = cellDatatoPointData
+
+    if selected_blocks:
+        extractBlock1 = ExtractBlock(registrationName="insert", Input=tmp)
+        extractBlock1.Selectors = selected_blocks
+        extractBlock1.UpdatePipeline()
+        tmp = extractBlock1
+
+    if merge:
+        mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=tmp)
+        mergeBlocks1.UpdatePipeline()
+        tmp = mergeBlocks1
+
+    drop_keys = []
+    for field in tmp.PointData:
+        fname = f'"{field.Name}"'
+        # print(f"fname={fname}, components={field.GetNumberOfComponents()}")
+        if field.GetNumberOfComponents() > 1:
+            fname = f'mag("{field.Name}")'
+            for i in range(field.GetNumberOfComponents()):
+                drop_keys.append(f"{field.Name}_{i}")
+            drop_keys.append(f"{field.Name}_Magnitude")
+        else:
+            drop_keys.append(field.Name)
+
+        for order in range(1, 5):
+            tmp = momentN(tmp, fname, field.Name, order, "Point Data")
+
+    # Add field for AxiVol
+    tmp = Calculator(registrationName=f"AxiVol", Input=tmp)
+    tmp.AttributeType = "Point Data"
+    tmp.ResultArrayName = f"AxiVol"
+    tmp.Function = "coordsX"
+    tmp.UpdatePipeline()
+
+    # print(f"tmp: {tmp.PointData[:]}", flush=True)
+
+    # convert CellData to PointData
+    pointDatatoCellData = PointDatatoCellData(
+        registrationName="PointDatatoCellData", Input=tmp
+    )
+    tmp = pointDatatoCellData
+    # print(f"tmp pointDatatoCellData: {tmp.CellData[:]}", flush=True)
+
+    # get integrated values
+    csvfile = integrateKeys(tmp, name, basedir, verbose=verbose)
+    csv = pd.read_csv(csvfile)
+    # print(f"integrateKeys: csv={list(csv.keys())}")
+    drop_keys += ["Cell ID", "Area", "Cell Type"]
+    # print(f"drop_keys={drop_keys}", flush=True)
+    csv.drop(columns=drop_keys, inplace=True)
+
+    # divide columns by AxiVol
+    keys = list(csv.keys())  # .remove("AxiVol")
+    for key in csv.keys():
+        if key != "AxiVol":
+            csv[key] = csv[key].div(csv["AxiVol"], axis=0)
+
+    if verbose:
+        print(
+            tabulate(csv.transpose(), headers="keys", tablefmt="psql"),
+            flush=True,
+        )
+
+    Delete(cellDatatoPointData)
+    del cellDatatoPointData
+
+    # Force a garbage collection
+    collected = gc.collect()
+    if verbose:
+        print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+
+    return csv
+
+
+def part(
+    pinput,
+    name: str,
+    fieldunits: dict,
+    ignored_keys: List[str],
+    ureg,
+    basedir: str,
+    ComputeHisto: bool,
+    BinCount: int = 20,
+    show: bool = False,
+    verbose: bool = False,
+):
+    pointDatatoCellData = PointDatatoCellData(pinput)
+    cellsize = CellSize(pointDatatoCellData)
+    # set some params
+    cellsize.ComputeLength = 0
+    cellsize.ComputeArea = 1
+    cellsize.ComputeVolume = 0
+    cellsize.ComputeVertexCount = 0
+    cellsize.ComputeSum = 1
+    cellsize.UpdatePipeline()
+
+    cellcenters = CellCenters(registrationName="CellCenters", Input=cellsize)
+    # Properties modified on cellCenters1
+    cellcenters.VertexCells = 1
+    cellcenters.UpdatePipeline()
+
+    # Add Volume
+    calculator1 = Calculator(registrationName=f"AxiVolume", Input=cellcenters)
+    calculator1.AttributeType = "Point Data"
+    calculator1.ResultArrayName = f"AxiVolume"
+    calculator1.Function = f"2*{pi}*coordsX*Area"
+    calculator1.UpdatePipeline()
+
+    dataset = sm.Fetch(calculator1)
+    np_dataset = dsa.WrapDataObject(dataset)
+    # print(f"type(dataset)={type(dataset)}", flush=True)
+    if dataset.IsA("vtkUnstructuredGrid"):
+        # print("UnstructuredGrid", flush=True)
+        block = dataset  # .GetBlock(0)
+    elif dataset.IsA("vtkPolyData"):
+        # print("vtkPolyData", flush=True)
+        block = dataset  # .GetBlock(0)
+    elif dataset.IsA("vtkMultiBlockDataSet"):
+        # print("MultiBlockDataSet", flush=True)
+        block = dataset.GetBlock(0)
+
+    Area_data = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
+    Area = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
+    np_Area = np_dataset.PointData["AxiVolume"]
+    # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
+    vol = algs.sum(np_Area)
+    vunits = fieldunits["Volume"]["Units"]
+    mm3 = f"{vunits[1]:~P}"
+    vol_mm3 = convert_data(
+        {"Volume": vunits},
+        vol,
+        "Volume",
+    )
+    print(
+        f"{name}: block fieldData[np_Area]: vol={vol_mm3} {mm3}, parts={algs.shape(np_Area)}"
+    )
+
+    # # check tvol == Sum(vol)
+    # if abs(1 - vol / tvol) > 1.0e-3:
+    #     print(f"insert Total volume != vol(insert), tvol={tvol}, vol={vol}, error={abs(1-vol/tvol)*100} %")
+
+    statsdict = resultStats(
+        calculator1,
+        name,
+        2,
+        vol,
+        fieldunits,
+        ignored_keys,
+        ureg,
+        basedir,
+        verbose=verbose,
+        axis=True,
+    )
+    # print(f"insert statsdict: {statsdict}", flush=True)
+    if ComputeHisto:
+        resultHistos(
+            calculator1,
+            name,
+            vol,
+            fieldunits,
+            ignored_keys,
+            basedir,
+            BinCount=BinCount,
+            show=show,
+            verbose=verbose,
+        )
+
+    Delete(pointDatatoCellData)
+    del pointDatatoCellData
+
+    # Force a garbage collection
+    collected = gc.collect()
+    if verbose:
+        print(f"part: Garbage collector: collected {collected} objects.")
+
+    return vol, statsdict
+
+
+def meshinfo(
+    input,
+    dim: int,
+    fieldunits: dict,
+    ignored_keys: List[str],
+    basedir: str,
+    ureg,
+    ComputeStats: bool = True,
+    ComputeHisto: bool = False,
+    BinCount: int = 10,
+    show: bool = False,
+    verbose: bool = False,
+    printed: bool = True,
+    axis: bool = True,
+):
+    """
+    display geometric info from input dataset
+    """
+
+    """
+    # does not apply for CellData vector (no coordX)
+    for field in input.PointData:
+        if field.GetNumberOfComponents() == 3:
+            print(
+                f"create {field.Name}norm for {field.Name} PointData vector",
+                flush=True,
+            )
+            tmp = createVectorNorm(
+                tmp, field.Name, field.Name, "Point Data"
+            )
+    for field in input.CellData:
+        if field.GetNumberOfComponents() == 3:
+            print(f"create norm for {field.Name} CellData vector", flush=True)
+            tmp = createVectorNorm(
+                tmp, field.Name, field.Name, "Cell Data"
+            )
+    """
+
+    # PointData to CellData
+    pointDatatoCellData = PointDatatoCellData(
+        registrationName="PointDatatoCellData", Input=input
+    )
+
+    print("Get mesh size")
+    cellsize = CellSize(pointDatatoCellData)  # input
+
+    # set some params
+    cellsize.ComputeLength = 0
+    cellsize.ComputeArea = 1
+    cellsize.ComputeVolume = 0
+    cellsize.ComputeVertexCount = 0
+    cellsize.ComputeSum = 1
+    # get params list
+    if not printed:
+        for prop in cellsize.ListProperties():
+            print(f"cellsize: {prop}={cellsize.GetPropertyValue(prop)}")
+
+    # apply
+    cellsize.UpdatePipeline()
+
+    cellcenters = CellCenters(registrationName="CellCenters", Input=cellsize)
+    # Properties modified on cellCenters1
+    cellcenters.VertexCells = 1
+    cellcenters.UpdatePipeline()
+
+    # Add Volume
+    calculator1 = Calculator(registrationName=f"AxiVolume", Input=cellcenters)
+    calculator1.AttributeType = "Point Data"
+    calculator1.ResultArrayName = f"AxiVolume"
+    calculator1.Function = f"2*{pi}*coordsX*Area"
+    calculator1.UpdatePipeline()
+
+    dataInfo = info(calculator1)
+    dataset = sm.Fetch(calculator1)
+    np_dataset = dsa.WrapDataObject(dataset)
+
+    blockdata = {}
+    # check dataset type
+    # print(f"type(dataset)={type(dataset)}", flush=True)
+    if dataset.IsA("vtkUnstructuredGrid"):
+        # print("UnstructuredGrid")
+        block = dataset
+    elif dataset.IsA("vtkMultiBlockDataSet"):
+        # print("MultiBlockDataSet")
+        block = dataset.GetBlock(0)
+
+    Area_data = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
+    Area = block.GetPointData().GetArray("AxiVolume")
+    # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
+    np_Area = np_dataset.PointData["AxiVolume"]
+    # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
+    tvol = algs.sum(np_Area)
+    vunits = fieldunits["Volume"]["Units"]
+    mm3 = f"{vunits[1]:~P}"
+    tvol_mm3 = convert_data(
+        {"Volume": vunits},
+        tvol,
+        "Volume",
+    )
+    print(
+        f"block fieldData[np_Area]: total={tvol_mm3} {mm3}, parts={algs.shape(np_Area)}"
+    )
+
+    if dataset.IsA("vtkMultiBlockDataSet"):
+        hierarchy = dataInfo.GetHierarchy()
+        rootnode = hierarchy.GetRootNode()
+        rootSelector = f"/{hierarchy.GetRootNodeName()}"
+        blocks = hierarchy.GetNumberOfChildren(rootnode)
+        print(f"Load blocks: {blocks}")
+
+        sum_vol = 0
+        for i in range(blocks):
+            child = hierarchy.GetChild(rootnode, i)
+            name = hierarchy.GetNodeName(child)
+            rootChild = f"{rootSelector}/{name}"
+            child_info = input.GetSubsetDataInformation(0, child)  # rootChild)
+            # print(f'block[{i}]: {name}, child={child}, childInfo: {child_info}')
+
+            nodes = child_info.GetNumberOfPoints()
+            cells = child_info.GetNumberOfCells()
+            bounds = child_info.GetBounds()
+
+            vol = np_Area.Arrays[i][0]
+            vol_mm3 = convert_data(
+                {"Volume": vunits},
+                vol,
+                "Volume",
+            )
+
+            # do not print volumes since they are wrong for unknown reason
+            print(
+                f"block[{i}]: {name}, nodes={nodes}, cells={cells}, bounds={bounds}"
+            )  # vol={vol_mm3} {mm3},
+
+            blockdata[rootChild] = {
+                "name": name,
+                "bounds": bounds,
+                "nodes": nodes,
+                "cells": cells,
+                "Area": vol,
+            }
+
+            sum_vol += vol
+
+        # # check tvol == Sum(vol)
+        # if abs(1 - sum_vol / tvol) > 1.0e-3:
+        #     print(f"Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %")
+
+        # Compute Stats
+        stats = []
+
+        print("Data ranges:", flush=True)
+        resultinfo(calculator1, ignored_keys, verbose)
+        Delete(pointDatatoCellData)
+        del pointDatatoCellData
+
+        # Force a garbage collection
+        collected = gc.collect()
+        if verbose:
+            print(f"meshinfo: Garbage collector: collected {collected} objects.")
+
+        print("Data ranges without Air:", flush=True)
+        selected_blocks = [block for block in blockdata.keys() if not "Air" in block]
+
+        # TODO: need to restart from input and apply ... Calculator1
+        extractBlock1 = ExtractBlock(registrationName="insert", Input=input)
+        extractBlock1.Selectors = selected_blocks
+        extractBlock1.UpdatePipeline()
+        mergeBlocks1 = MergeBlocks(registrationName="MergeBlocks1", Input=extractBlock1)
+        mergeBlocks1.UpdatePipeline()
+
+        vol, statsdict = part(
+            mergeBlocks1,
+            "insert",
+            fieldunits,
+            ignored_keys,
+            ureg,
+            basedir,
+            ComputeHisto,
+            BinCount,
+        )
+        stats.append(statsdict)
+
+        icsv = part_integrate(
+            input, "insert", selected_blocks, basedir, merge=True, verbose=verbose
+        )
+        if verbose:
+            print(f'insert: vol={vol}, ivol={icsv["AxiVol"].to_list()[0] * 2 * pi}')
+        for key, value in statsdict.items():
+            for array, avalue in value["Arrays"].items():
+                if "Stats" in avalue:
+                    keyinfo = array.split(".")
+                    # print(f"keyinfo={keyinfo}", flush=True)
+                    if len(keyinfo) == 2:
+                        (physic, fieldname) = keyinfo
+                    elif len(keyinfo) == 3:
+                        (toolbox, physic, fieldname) = keyinfo
+                    else:
+                        raise RuntimeError(
+                            f"{key}: cannot get keyinfo as splitted char"
+                        )
+
+                    symbol = fieldunits[fieldname]["Symbol"]
+                    msymbol = symbol
+                    if "mSymbol" in fieldunits[fieldname]:
+                        msymbol = fieldunits[fieldname]["mSymbol"]
+                    units = {fieldname: fieldunits[fieldname]["Units"]}
+                    [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                    M = [0] * 5
+                    M[1] = icsv[f"{array}_moment1"].to_list()[0]
+                    M[2] = icsv[f"{array}_moment2"].to_list()[0]
+                    M[3] = icsv[f"{array}_moment3"].to_list()[0]
+                    M[4] = icsv[f"{array}_moment4"].to_list()[0]
+                    avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
+
+                    avalue["Stats"]["Standard Deviation"] = convert_data(
+                        units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                    )
+
+                    for order in range(2, 5):
+                        units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                        if in_unit != ureg.kelvin:
+                            units[f"M{order}"] = [in_unit * order, out_unit * order]
+                        else:
+                            units[f"M{order}"] = [in_unit * order, in_unit * order]
+
+                        avalue["Stats"][f"M{order}"] = convert_data(
+                            units, M[order], f"M{order}"
+                        )
+
+                    # print(f"{array}: {avalue['Stats']}")
+
+        stats.append(statsdict)
+
+        # aggregate stats data
+        createStatsTable([statsdict], "insert", fieldunits, basedir, ureg, verbose)
+
+        if not ComputeStats:
+            return cellsize, blockdata, statsdict
+
+        print("Data ranges per block:", flush=True)
+        sum_vol = 0
+        for i, block in enumerate(blockdata.keys()):
+            name = blockdata[block]["name"]
+            print(f"block[{i}]: extract {block}, name={name}", flush=True)
+            # TODO: need to restart from input and apply ... Calculator1
+            extractBlock1 = ExtractBlock(registrationName=name, Input=input)
+            extractBlock1.Selectors = [block]
+            extractBlock1.UpdatePipeline()
+
+            vol, statsdict = part(
+                extractBlock1,
+                name,
+                fieldunits,
+                ignored_keys,
+                ureg,
+                basedir,
+                ComputeHisto,
+                BinCount,
+            )
+            stats.append(statsdict)
+            sum_vol += vol
+
+            icsv = part_integrate(
+                input, name, [block], basedir, merge=False, verbose=verbose
+            )
+            if verbose:
+                print(
+                    f'name={name}: vol={vol}, ivol={icsv["Points_0"].to_list()[0] * 2 * pi}'
+                )
+
+            # print(f'insert: vol={vol}, ivol={icsv["AxiVol"].to_list()[0] * 2 * pi}')
+            for key, value in statsdict.items():
+                for array, avalue in value["Arrays"].items():
+                    if "Stats" in avalue:
+                        keyinfo = array.split(".")
+                        # print(f"keyinfo={keyinfo}", flush=True)
+                        if len(keyinfo) == 2:
+                            (physic, fieldname) = keyinfo
+                        elif len(keyinfo) == 3:
+                            (toolbox, physic, fieldname) = keyinfo
+                        else:
+                            raise RuntimeError(
+                                f"{key}: cannot get keyinfo as splitted char"
+                            )
+
+                        symbol = fieldunits[fieldname]["Symbol"]
+                        msymbol = symbol
+                        if "mSymbol" in fieldunits[fieldname]:
+                            msymbol = fieldunits[fieldname]["mSymbol"]
+                        units = {fieldname: fieldunits[fieldname]["Units"]}
+                        [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                        M = [0] * 5
+                        M[1] = icsv[f"{array}_moment1"].to_list()[0]
+                        M[2] = icsv[f"{array}_moment2"].to_list()[0]
+                        M[3] = icsv[f"{array}_moment3"].to_list()[0]
+                        M[4] = icsv[f"{array}_moment4"].to_list()[0]
+                        avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
+
+                        avalue["Stats"]["Standard Deviation"] = convert_data(
+                            units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                        )
+
+                        for order in range(2, 5):
+                            units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                            if in_unit != ureg.kelvin:
+                                units[f"M{order}"] = [in_unit * order, out_unit * order]
+                            else:
+                                units[f"M{order}"] = [in_unit * order, in_unit * order]
+
+                            avalue["Stats"][f"M{order}"] = convert_data(
+                                units, M[order], f"M{order}"
+                            )
+
+                        print(f"{array}: {avalue['Stats']}")
+
+            stats.append(statsdict)
+            Delete(extractBlock1)
+            del extractBlock1
+
+            # Force a garbage collection
+            collected = gc.collect()
+            if verbose:
+                print(f"loopblock: Garbage collector: collected {collected} objects.")
+
+            # aggregate stats data
+            createStatsTable([statsdict], name, fieldunits, basedir, ureg, verbose)
+
+        # check tvol == Sum(vol)
+        print(
+            f"reworked Total volume: tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %"
+        )
+        if abs(1 - sum_vol / tvol) > 1.0e-3:
+            print(
+                f"reworked Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %"
+            )
+
+        # aggregate stats data
+        createStatsTable(stats, "total", fieldunits, basedir, ureg, verbose)
+
+    return input, blockdata, dict()

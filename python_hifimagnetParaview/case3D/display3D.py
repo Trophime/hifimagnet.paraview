@@ -17,15 +17,6 @@ from paraview.simple import (
 from ..method import selectBlocks, convert_data
 from ..view import setCamera, makeboxclip, makeplaneslice, makeplaneOrOzslice
 
-from pint import Quantity
-
-# Ignore warning for pint
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
-
 
 def displayField(
     input,

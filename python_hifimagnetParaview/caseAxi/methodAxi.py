@@ -32,16 +32,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "nu": {
-            "Symbol": "Poisson",
-            "Units": [
-                ureg.dimensionless,
-                ureg.dimensionless,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "EE": {
-            "Symbol": "YoungModulus",
+        "YoungModulus": {
+            "Symbol": "E",
             "Units": [
                 ureg.pascal,
                 ureg.megapascal,
@@ -104,38 +96,7 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Units": [ureg.volt, ureg.volt],
             "Exclude": ["Air", "Isolant"],
         },
-        "E": {
-            "Symbol": "E",
-            "Units": [ureg.volt / ureg.meter, ureg.volt / ureg.Unit(distance_unit)],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "E_ur": {
-            "Symbol": "Er",
-            "Units": [
-                ureg.volt / ureg.meter**2,
-                ureg.volt / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "E_ut": {
-            "Symbol": "Et",
-            "mSymbol": r"$E_{\theta}$",
-            "Units": [
-                ureg.volt / ureg.meter**2,
-                ureg.volt / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "Enorm": {
-            "Symbol": "E",
-            "mSymbol": r"$\| E \|$",
-            "Units": [
-                ureg.volt / ureg.meter**2,
-                ureg.volt / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "J": {
+        "Jth": {
             "Symbol": "J",
             "Units": [
                 ureg.ampere / ureg.meter**2,
@@ -143,33 +104,16 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "J_ur": {
-            "Symbol": "Jr",
+        "Fext": {
+            "Symbol": "F_ext",
+            "mSymbol": r"$F_{ext}$",
             "Units": [
-                ureg.ampere / ureg.meter**2,
-                ureg.ampere / ureg.Unit(distance_unit) ** 2,
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "J_ut": {
-            "Symbol": "Jt",
-            "mSymbol": r"$J_{\theta}$",
-            "Units": [
-                ureg.ampere / ureg.meter**2,
-                ureg.ampere / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "Jnorm": {
-            "Symbol": "J",
-            "mSymbol": r"$\| J \|$",
-            "Units": [
-                ureg.ampere / ureg.meter**2,
-                ureg.ampere / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "F_laplace": {
+        "Flaplace": {
             "Symbol": "F",
             "Units": [
                 ureg.newton / ureg.meter**3,
@@ -177,33 +121,21 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "F_laplace_ur": {
-            "Symbol": "Fr",
+        "atheta": {
+            "Symbol": "A",
             "Units": [
-                ureg.newton / ureg.meter**2,
-                ureg.newton / ureg.Unit(distance_unit) ** 2,
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
             ],
-            "Exclude": ["Air", "Isolant"],
+            "Exclude": [],
         },
-        "F_laplace_ut": {
-            "Symbol": "Ft",
-            "mSymbol": r"$F_{\theta}$",
-            "Units": [
-                ureg.newton / ureg.meter**2,
-                ureg.newton / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
+        "Bg": {
+            "Symbol": "B_Bg",
+            "mSymbol": r"$B_{bg}$",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
         },
-        "F_laplacenorm": {
-            "Symbol": "F",
-            "mSymbol": r"$\| F \|$",
-            "Units": [
-                ureg.newton / ureg.meter**2,
-                ureg.newton / ureg.Unit(distance_unit) ** 2,
-            ],
-            "Exclude": ["Air", "Isolant"],
-        },
-        "Bz": {
+        "B": {
             "Symbol": "B",
             "Units": [ureg.tesla, ureg.tesla],
             "Exclude": [],
@@ -216,7 +148,7 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air"],
         },
-        "displacement_ur": {
+        "displacement_r": {
             "Symbol": "ur",
             "Units": [
                 ureg.meter / ureg.second,
@@ -224,9 +156,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air"],
         },
-        "displacement_ut": {
-            "Symbol": "ut",
-            "mSymbol": r"$u_{\theta}$",
+        "displacement_z": {
+            "Symbol": "uz",
             "Units": [
                 ureg.meter / ureg.second,
                 ureg.Unit(distance_unit) / ureg.second,
@@ -304,15 +235,6 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air"],
         },
-        "stress_T": {
-            "Symbol": "stress_T",
-            "mSymbol": r"$\bar{\bar{\sigma}}_{T}$",
-            "Units": [
-                ureg.pascal,
-                ureg.megapascal,
-            ],
-            "Exclude": ["Air"],
-        },
         "stress_01": {
             "Symbol": "stress_01",
             "mSymbol": r"$\bar{\bar{\sigma}}_{01}$",
@@ -340,6 +262,24 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             ],
             "Exclude": ["Air"],
         },
+        "HoopStrain": {
+            "Symbol": "HoopStrain",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{Hoop}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "HoopStress": {
+            "Symbol": "HoopStress",
+            "mSymbol": r"$\bar{\bar{\sigma}}_{Hoop}$",
+            "Units": [
+                ureg.pascal,
+                ureg.megapascal,
+            ],
+            "Exclude": ["Air"],
+        },
         "Vonmises": {
             "Symbol": "VonMises",
             "mSymbol": r"$\bar{\bar{\sigma}}_{VonMises}$",
@@ -359,10 +299,12 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
     del tmp
 
     ignored_keys = [
-        "cfpdes.expr.nu",
-        "cfpdes.expr.EE",
+        "elasticity.Lame1",
+        "elasticity.Lame2",
+        "elasticity.PoissonCoefficient",
+        "elasticity.YoungModulus",
         "Area",
-        "Volume",
+        "AxiVolume",
         "r",
         "Cos",
         "Sin",
