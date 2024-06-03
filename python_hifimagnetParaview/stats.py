@@ -316,7 +316,6 @@ def resultStats(
     BinCount: int = 10,
     show: bool = False,
     verbose: bool = False,
-    axis: bool = False,
 ) -> dict:
     """
     compute stats for PointData, CellData and FieldData
@@ -326,44 +325,6 @@ def resultStats(
     datadict = resultinfo(input, ignored_keys, verbose)
     if verbose:
         print(f"resultStats[{name}]: datadict={datadict}", flush=True)
-
-    if axis:
-        PointData_keys = list(datadict["PointData"]["Arrays"].keys())
-
-        spreadSheetView = CreateView("SpreadSheetView")
-        cellCenters1Display = Show(input, spreadSheetView, "SpreadSheetRepresentation")
-        spreadSheetView.Update()
-
-        filename = f"{basedir}/{name}-Axi-cellcenters-all.csv"
-        ExportView(
-            filename,
-            view=spreadSheetView,
-            RealNumberNotation="Scientific",
-        )
-
-        csv = pd.read_csv(filename)
-        keys = csv.columns.values.tolist()
-        # print(f"read_csv: csv={filename}, keys={keys}", flush=True)
-
-        PointData_keys = []
-        for item in input.PointData[:]:
-            suffix = ""
-            if item.GetNumberOfComponents() > 1:
-                suffix = "_Magnitude"
-
-                for component in range(item.GetNumberOfComponents()):
-                    ignore = f"{item.Name}_{component}"
-                    if ignore not in ignored_keys:
-                        ignored_keys.append(f"{item.Name}_{component}")
-
-            PointData_keys.append(f"{item.Name}{suffix}")
-
-        # print(f"PointData_keys={PointData_keys}")
-        # print(f"csv keys={keys}")
-        missing_keys = [key for key in PointData_keys if key not in keys]
-        if missing_keys:
-            print(f"missing_keys={missing_keys}")
-            exit(1)
 
     for datatype in datadict:
         if datatype != "FieldData":
@@ -383,128 +344,45 @@ def resultStats(
                         raise RuntimeError(
                             f"{key}: cannot get keyinfo as splitted char"
                         )
-                    if axis:
+
+                    for excluded in fieldunits[fieldname]["Exclude"]:
+                        if excluded in name:
+                            found = True
+                            if verbose:
+                                print(f"ignore block: {name}", flush=True)
+                            break
+
+                    if not found:
                         Components = kdata["Components"]
                         bounds = kdata["Bounds"]
-                        symbol = fieldunits[fieldname]["Symbol"]
-                        msymbol = symbol
-                        if "mSymbol" in fieldunits[fieldname]:
-                            msymbol = fieldunits[fieldname]["mSymbol"]
-                        units = {fieldname: fieldunits[fieldname]["Units"]}
-                        [in_unit, out_unit] = fieldunits[fieldname]["Units"]
-
                         if bounds[0][0] != bounds[0][1]:
-                            stats = {
-                                "Variable": [rf"{symbol}[{out_unit:~P}]"],
-                                "Name": [name],
-                                "Minimum": [
-                                    convert_data(units, bounds[0][0], fieldname)
-                                ],
-                                "M1": [0],
-                                "Maximum": [
-                                    convert_data(units, bounds[0][1], fieldname)
-                                ],
-                                "Standard Deviation": [0],
-                                "M2": [0],
-                                "M3": [0],
-                                "M4": [0],
-                            }
+                            if not "Stats" in kdata:
+                                # print(f"\t{key}: create kdata[Stats]", flush=True)
+                                kdata["Stats"] = {}
 
-                            # print(f"AxiStats for {key}", flush=True)
-                            if Components > 1:
-                                key = f"{key}_Magnitude"
-                            for order in range(1, 5):
-                                # print(f"Create moment{order} for {key}", flush=True)
-                                units = {f"M{order}": fieldunits[fieldname]["Units"]}
-                                if in_unit != ureg.kelvin and order > 1:
-                                    units[f"M{order}"] = [
-                                        in_unit**order,
-                                        out_unit**order,
-                                    ]
-                                else:
-                                    units[f"M{order}"] = [
-                                        in_unit**order,
-                                        in_unit**order,
-                                    ]
+                            kdata["Stats"] = getresultStats(
+                                input,
+                                name,
+                                key,
+                                AttributeMode,
+                                basedir,
+                                verbose=verbose,
+                            )
 
-                                res = (
-                                    2
-                                    * pi
-                                    * csv["Area"]
-                                    * csv["Points_0"]
-                                    * csv[key] ** order
-                                )
-                                value = res.sum() / AreaorVolume
-                                # print(
-                                #     f"{key} M{order}: {value}, integ={res.sum()}, Area={Area}, name={name}")
-                                #    type={type(value)}, type={type(value.item())}
-                                out_res = convert_data(units, value.item(), f"M{order}")
-                                # print(f"M{order}: {out_res}")
-                                stats[f"M{order}"] = [out_res]
-
-                            stats["Standard Deviation"] = [
-                                sqrt(abs(stats["M1"][0] ** 2 - stats["M2"][0]))
-                            ]
-                            # rename M1 to Mean
-                            stats["Mean"] = stats["M1"]
-                            del stats["M1"]
-                            # print(f"{key}: stats={stats}", flush=True)
-
-                            kdata["Stats"] = pd.DataFrame.from_dict(stats)
-
-                            if verbose:
-                                print(f"resultStats: key={key}")
-                                print(
-                                    tabulate(
-                                        kdata["Stats"],
-                                        headers="keys",
-                                        tablefmt="psql",
-                                    )
-                                )
-
-                    else:
-                        for excluded in fieldunits[fieldname]["Exclude"]:
-                            if excluded in name:
-                                found = True
-                                if verbose:
-                                    print(f"ignore block: {name}", flush=True)
-                                break
-
-                        if not found:
-                            Components = kdata["Components"]
-                            bounds = kdata["Bounds"]
-                            if bounds[0][0] != bounds[0][1]:
-                                if not "Stats" in kdata:
-                                    # print(f"\t{key}: create kdata[Stats]", flush=True)
-                                    kdata["Stats"] = {}
-
-                                kdata["Stats"] = getresultStats(
+                            if histo:
+                                getresultHisto(
                                     input,
                                     name,
+                                    dim,
+                                    AreaorVolume,
+                                    fieldunits,
                                     key,
-                                    AttributeMode,
+                                    TypeMode,
                                     basedir,
+                                    Components,
+                                    BinCount=BinCount,
+                                    show=show,
                                     verbose=verbose,
                                 )
-
-                                if histo:
-                                    getresultHisto(
-                                        input,
-                                        name,
-                                        dim,
-                                        AreaorVolume,
-                                        fieldunits,
-                                        key,
-                                        TypeMode,
-                                        basedir,
-                                        Components,
-                                        BinCount=BinCount,
-                                        show=show,
-                                        verbose=verbose,
-                                    )
-
-    if axis:
-        # remove: f"{basedir}/{name}-Axi-cellcenters-all.csv"
-        os.remove(filename)
     # display stats
     return datadict

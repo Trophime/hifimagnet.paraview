@@ -199,7 +199,6 @@ def main():
         BinCount=args.bins,
         show=(not args.save),
         verbose=args.verbose,
-        axis=axis,
     )
 
     # Plots

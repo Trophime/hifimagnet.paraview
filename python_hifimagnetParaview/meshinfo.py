@@ -156,7 +156,6 @@ def meshinfo(
     show: bool = False,
     verbose: bool = False,
     printed: bool = True,
-    axis: bool = False,
 ) -> tuple:
     """
     display geometric info from input dataset
@@ -464,7 +463,6 @@ def meshinfo(
             BinCount=BinCount,
             show=show,
             verbose=verbose,
-            axis=axis,
         )
         if verbose:
             print(f"insert statsdict={statsdict}", flush=True)
@@ -505,7 +503,6 @@ def meshinfo(
                     BinCount=BinCount,
                     show=show,
                     verbose=verbose,
-                    axis=axis,
                 )
                 stats.append(statsdict)
                 Delete(extractBlock1)

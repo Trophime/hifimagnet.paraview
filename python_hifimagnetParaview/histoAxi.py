@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import gc
 import matplotlib.pyplot as plt
@@ -56,17 +57,23 @@ def plotHistoAxi(
     values = csv[key].to_list()
     out_values = convert_data(units, values, fieldname)
     # csv[key] = out_values
-    csv[key] = [f"{val:.3f}" for val in out_values]
+    csv[key] = [f"{val:.2E}" for val in out_values]
 
-    counts, extend_bins, patches = hist(csv[key], bins=BinCount, weights=csv["AxiVol"])
+    counts, extend_bins, patches = hist(
+        np.array(csv[key], float),
+        bins=BinCount,
+        weights=csv["AxiVol"],
+        rwidth=0.5,
+    )
     print(f"counts={counts}")
     print(f"extend_bins={extend_bins}")
     print(f"patches={patches}")
 
+    ticks = [(patch._x0 + patch._x0 + patch._width) / 2 for patch in patches]
     total_key = "Fraction of total Volume [%]"
     plt.xlabel(rf"{msymbol}[{out_unit:~P}]")
     plt.ylabel(total_key)
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(ticks, rotation=45, ha="right")
     plt.title(f"{name}: {key}")
     plt.grid(True)
     # plt.legend(False)

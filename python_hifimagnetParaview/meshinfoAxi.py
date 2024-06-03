@@ -20,7 +20,7 @@ from paraview.vtk.numpy_interface import dataset_adapter as dsa
 from paraview.vtk.numpy_interface import algorithms as algs
 
 from .method import convert_data, info, resultinfo, momentN, integrateKeys
-from .stats import resultStats, createStatsTable
+from .statsAxi import resultStats, createStatsTable
 from .histoAxi import resultHistos
 
 
@@ -196,7 +196,6 @@ def part(
         ureg,
         basedir,
         verbose=verbose,
-        axis=True,
     )
     # print(f"insert statsdict: {statsdict}", flush=True)
     if ComputeHisto:
@@ -236,7 +235,6 @@ def meshinfo(
     show: bool = False,
     verbose: bool = False,
     printed: bool = True,
-    axis: bool = True,
 ):
     """
     display geometric info from input dataset
@@ -460,7 +458,7 @@ def meshinfo(
         stats.append(statsdict)
 
         # aggregate stats data
-        createStatsTable([statsdict], "insert", fieldunits, basedir, ureg, verbose)
+        createStatsTable([statsdict], "insert", fieldunits, basedir, verbose)
 
         if not ComputeStats:
             return cellsize, blockdata, statsdict
@@ -552,7 +550,7 @@ def meshinfo(
                 print(f"loopblock: Garbage collector: collected {collected} objects.")
 
             # aggregate stats data
-            createStatsTable([statsdict], name, fieldunits, basedir, ureg, verbose)
+            createStatsTable([statsdict], name, fieldunits, basedir, verbose)
 
         # check tvol == Sum(vol)
         print(
@@ -564,6 +562,6 @@ def meshinfo(
             )
 
         # aggregate stats data
-        createStatsTable(stats, "total", fieldunits, basedir, ureg, verbose)
+        createStatsTable(stats, "total", fieldunits, basedir, verbose)
 
     return input, blockdata, dict()

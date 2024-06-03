@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import matplotlib.pyplot as plt
 
@@ -63,7 +64,7 @@ def plotHisto(
     values = csv["bin_extents"].to_list()
     out_values = convert_data(units, values, fieldname)
     # csv = csv.assign(bin_extents=out_values)
-    csv = csv.assign(bin_extents=[f"{val:.2f}" for val in out_values])
+    csv = csv.assign(bin_extents=np.array([f"{val:.2E}" for val in out_values], float))
     csv[f"{grandeur}_total"] = csv[f"{grandeur}_total"] / AreaorVolume * 100
 
     csv.plot.bar(
