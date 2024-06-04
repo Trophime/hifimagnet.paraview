@@ -27,30 +27,39 @@ def plotOr(
     theta: float,
     z: float,
     fieldunits: dict,
+    ignored_keys: List[str],
     basedir: str,
     show: bool = True,
     printed: bool = True,
+    marker: str = None,
 ):
     os.makedirs(f"{basedir}/plots", exist_ok=True)
 
     [r0, r1] = r
     radian = theta * pi / 180.0
 
-    plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
+    cellDatatoPointData1 = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+
+    plotOverLine = PlotOverLine(registrationName="Oz", Input=cellDatatoPointData1)
     # get params list
     if not printed:
         for prop in plotOverLine.ListProperties():
-            print(f"plotOverLine': {prop}={plotOverLine.GetPropertyValue(prop)}")
+            print(
+                f"plotOverLine': {prop}={plotOverLine.GetPropertyValue(prop)}",
+                flush=True,
+            )
 
     # init the 'Line' selected for 'Source'
-    plotOverLine.Source.Point1 = [r0 * cos(radian), r0 * sin(radian), z]
-    plotOverLine.Source.Point2 = [r1 * cos(radian), r1 * sin(radian), z]
+    plotOverLine.Point1 = [r0 * cos(radian), r0 * sin(radian), z]
+    plotOverLine.Point2 = [r1 * cos(radian), r1 * sin(radian), z]
 
     filename = f"{basedir}/plots/r0={r0}m-r1={r1}m-theta={theta}deg-z={z}m.csv"
     export = CreateWriter(filename, proxy=plotOverLine)
     if not printed:
         for prop in export.ListProperties():
-            print(f"export: {prop}={export.GetPropertyValue(prop)}")
+            print(f"export: {prop}={export.GetPropertyValue(prop)}", flush=True)
     export.UpdateVTKObjects()  # is it needed?
     export.UpdatePipeline()
 
@@ -64,6 +73,7 @@ def plotOr(
         basedir: str,
         ax=None,
         show: bool = True,
+        marker: str = None,
     ):
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
@@ -93,7 +103,7 @@ def plotOr(
 
         # rename columns
         keycsv.rename(columns={"arc_length": "r"}, inplace=True)
-        # print(f"new keys: {keycsv.columns.values.tolist()}")
+        # print(f"new keys: {keycsv.columns.values.tolist()}", flush=True)
 
         # rescale columns to plot
         units = {fieldname: fieldunits[fieldname]["Units"]}
@@ -102,7 +112,7 @@ def plotOr(
         ndf = {key: [val for val in out_values]}
 
         keycsv[key] = ndf[key]
-        keycsv.plot(x="r", y=key, marker="o", grid=True, ax=ax)
+        keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
 
         plt.xlabel("r [m]")
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
@@ -116,6 +126,7 @@ def plotOr(
         if show:
             plt.show()
         else:
+            plt.tight_layout()
             plt.savefig(
                 f"{basedir}/plots/{key}-vs-r-theta={theta}-z={z_mm}{mm}.png", dpi=300
             )
@@ -124,23 +135,37 @@ def plotOr(
         pass
 
     # requirements: create PointData from CellData
-    for field in input.PointData:
-        plotOrField(
-            filename,
-            field,
-            theta,
-            z,
-            fieldunits,
-            basedir,
-            ax=None,
-            show=show,
-        )
+    # for field in input.PointData.keys():
+    datadict = resultinfo(cellDatatoPointData1, ignored_keys)
+    for field in datadict["PointData"]["Arrays"]:
+        if not field in ignored_keys:
+            kdata = datadict["PointData"]["Arrays"][field]
+            Components = kdata["Components"]
+            print(f"plotOrField for {field} - components={Components}", flush=True)
+            if Components > 1:
+                for i in range(Components):
+                    print(f"plotOrField for {field}:{i} skipped", flush=True)
+            else:
+                plotOrField(
+                    filename,
+                    field,
+                    theta,
+                    z,
+                    fieldunits,
+                    basedir,
+                    ax=None,
+                    show=show,
+                    marker=marker,
+                )
 
     # remove temporary csv files
     os.remove(filename)
 
     Delete(plotOverLine)
     del plotOverLine
+
+    Delete(cellDatatoPointData1)
+    del cellDatatoPointData1
     pass
 
 
@@ -150,26 +175,32 @@ def plotOz(
     theta: float,
     z: list[float],
     fieldunits: dict,
+    ignored_keys: List[str],
     basedir: str,
     show: bool = True,
     printed: bool = True,
+    marker: str = None,
 ):
     os.makedirs(f"{basedir}/plots", exist_ok=True)
 
     [z0, z1] = z
     radian = theta * pi / 180.0
 
-    plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
+    cellDatatoPointData1 = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+
+    plotOverLine = PlotOverLine(registrationName="Oz", Input=cellDatatoPointData1)
 
     # init the 'Line' selected for 'Source'
-    plotOverLine.Source.Point1 = [r * cos(radian), r * sin(radian), z0]
-    plotOverLine.Source.Point2 = [r * cos(radian), r * sin(radian), z1]
+    plotOverLine.Point1 = [r * cos(radian), r * sin(radian), z0]
+    plotOverLine.Point2 = [r * cos(radian), r * sin(radian), z1]
 
     filename = f"{basedir}/plots/r={r}m-theta={theta}deg-z0={z0}m-z1={z1}m.csv"
     export = CreateWriter(filename, proxy=plotOverLine)
     if not printed:
         for prop in export.ListProperties():
-            print(f"export: {prop}={export.GetPropertyValue(prop)}")
+            print(f"export: {prop}={export.GetPropertyValue(prop)}", flush=True)
     export.UpdateVTKObjects()  # is it needed?
     export.UpdatePipeline()
 
@@ -183,6 +214,7 @@ def plotOz(
         basedir: str,
         ax=None,
         show: bool = True,
+        marker: str = None,
     ):
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
@@ -209,7 +241,7 @@ def plotOz(
 
         # rename columns
         keycsv.rename(columns={"arc_length": "z"}, inplace=True)
-        # print(f"new keys: {keycsv.columns.values.tolist()}")
+        # print(f"new keys: {keycsv.columns.values.tolist()}", flush=True)
 
         # rescale columns to plot
         units = {fieldname: fieldunits[fieldname]["Units"]}
@@ -218,7 +250,7 @@ def plotOz(
         ndf = {key: [val for val in out_values]}
 
         keycsv[key] = ndf[key]
-        keycsv.plot(x="z", y=key, marker="o", grid=True, ax=ax)
+        keycsv.plot(x="z", y=key, marker=marker, grid=True, ax=ax)
 
         plt.xlabel("z [m]")
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
@@ -232,6 +264,7 @@ def plotOz(
         if show:
             plt.show()
         else:
+            plt.tight_layout()
             plt.savefig(
                 f"{basedir}/plots/{key}-vs-z-theta={theta}-r={r_mm}{mm}.png", dpi=300
             )
@@ -240,23 +273,37 @@ def plotOz(
         pass
 
     # requirements: create PointData from CellData
-    for field in input.PointData:
-        plotOzField(
-            filename,
-            field,
-            r,
-            theta,
-            fieldunits,
-            basedir,
-            ax=None,
-            show=show,
-        )
+    # for field in input.PointData.keys():
+    datadict = resultinfo(cellDatatoPointData1, ignored_keys)
+    for field in datadict["PointData"]["Arrays"]:
+        if not field in ignored_keys:
+            kdata = datadict["PointData"]["Arrays"][field]
+            Components = kdata["Components"]
+            print(f"plotOzField for {field} - components={Components}", flush=True)
+            if Components > 1:
+                for i in range(Components):
+                    print(f"plotOzField for {field}:{i} skipped", flush=True)
+            else:
+                plotOzField(
+                    filename,
+                    field,
+                    r,
+                    theta,
+                    fieldunits,
+                    basedir,
+                    ax=None,
+                    show=show,
+                    marker=marker,
+                )
 
     # remove temporary csv files
     os.remove(filename)
 
     Delete(plotOverLine)
     del plotOverLine
+
+    Delete(cellDatatoPointData1)
+    del cellDatatoPointData1
     pass
 
 
@@ -271,19 +318,20 @@ def plotTheta(
     show: bool = True,
     printed: bool = True,
     verbose: bool = False,
+    marker: str = None,
 ):
     """
     for theta, need to apply CellDataToPointData filter
     """
     os.makedirs(f"{basedir}/plots", exist_ok=True)
 
-    print(f"plotTheta: r={r}, z={z}")
+    print(f"plotTheta: r={r}, z={z}", flush=True)
     cellDatatoPointData1 = CellDatatoPointData(
         registrationName="CellDatatoPointData", Input=input
     )
 
     # create clip with plane (howto give a color for each clip)
-    print("cellDatatoPointDatalip up and down")
+    print("cellDatatoPointDatalip up and down", flush=True)
     clip_down = makeclip(cellDatatoPointData1, "clip_down", invert=False)
     clip_up = makeclip(cellDatatoPointData1, "clip_up", invert=True)
 
@@ -299,7 +347,8 @@ def plotTheta(
         if not printed:
             for prop in plotOnIntersectionCurve.ListProperties():
                 print(
-                    f"plotOnIntersectionCurve: {prop}={plotOnIntersectionCurve.GetPropertyValue(prop)}"
+                    f"plotOnIntersectionCurve: {prop}={plotOnIntersectionCurve.GetPropertyValue(prop)}",
+                    flush=True,
                 )
 
         plotOnIntersectionCurve.SliceType = "Plane"
@@ -313,7 +362,7 @@ def plotTheta(
         )
         if not printed:
             for prop in export.ListProperties():
-                print(f"export: {prop}={export.GetPropertyValue(prop)}")
+                print(f"export: {prop}={export.GetPropertyValue(prop)}", flush=True)
         export.UpdateVTKObjects()  # is it needed?
         export.UpdatePipeline()
         files.append(f"{basedir}/plots/r={r}m-z={z}m-{i}.csv")
@@ -328,6 +377,7 @@ def plotTheta(
         basedir: str,
         ax=None,
         show: bool = True,
+        marker: str = None,
     ):
 
         print(f"plotThetaField: files={files}, key={key}, show={show}", flush=True)
@@ -356,11 +406,11 @@ def plotTheta(
 
             # rename columns
             keycsv.rename(columns={"Points:0": "x", "Points:1": "y"}, inplace=True)
-            # print(f"new keys: {keycsv.columns.values.tolist()}")
+            # print(f"new keys: {keycsv.columns.values.tolist()}", flush=True)
 
             # rescale columns to plot
             theta = arctan2(keycsv["y"].to_numpy(), keycsv["x"].to_numpy()) * 180 / pi
-            # print(f'theta (type={type(theta)}, nelem={theta.shape}): {theta}')
+            # print(f'theta (type={type(theta)}, nelem={theta.shape}): {theta}', flush=True)
             keycsv["theta"] = keycsv.apply(
                 lambda row: arctan2(row.y, row.x) * 180 / pi,
                 axis=1,
@@ -389,10 +439,10 @@ def plotTheta(
         r_mm = convert_data(r_units, r, "coord")
         z_mm = convert_data(r_units, z, "coord")
         df.to_csv(f"{basedir}/plots/{key}-vs-theta-r={r_mm}{mm}-z={z_mm}{mm}.csv")
-        # print(f"df keys: {df.columns.values.tolist()}")
+        # print(f"df keys: {df.columns.values.tolist()}", flush=True)
         # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
-        # print(f"df={df}")
-        df.plot(x="theta", y=key, marker="o", grid=True, ax=ax)
+        # print(f"df={df}", flush=True)
+        df.plot(x="theta", y=key, marker=marker, grid=True, ax=ax)
 
         plt.xlabel(r"$\theta$ [deg]")
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
@@ -408,13 +458,14 @@ def plotTheta(
         if show:
             plt.show()
         else:
+            plt.tight_layout()
             plt.savefig(
                 f"{basedir}/plots/{key}-vs-theta-r={r_mm}{mm}-z={z_mm}{mm}.png", dpi=300
             )
         plt.close()
 
-        print(f"{key} stats on r={r_mm}{mm}-z={z_mm}{mm}")
-        print(f"{df[key].describe()}")
+        print(f"{key} stats on r={r_mm}{mm}-z={z_mm}{mm}", flush=True)
+        print(f"{df[key].describe()}", flush=True)
         pass
 
     # requirements: create PointData from CellData
@@ -423,15 +474,23 @@ def plotTheta(
         if not field in ignored_keys:
             kdata = datadict["PointData"]["Arrays"][field]
             Components = kdata["Components"]
-            print(f"plotThetaField for {field} - components={Components}")
+            print(f"plotThetaField for {field} - components={Components}", flush=True)
             if Components > 1:
                 for i in range(Components):
-                    print(f"plotThetaField for {field}:{i} skipped")
+                    print(f"plotThetaField for {field}:{i} skipped", flush=True)
                 # for i in range(Components):
                 #     plotThetaField(files, f"{field}:{i}", r, z, ax=None, show=show)
             else:
                 plotThetaField(
-                    files, field, r, z, fieldunits, basedir, ax=None, show=show
+                    files,
+                    field,
+                    r,
+                    z,
+                    fieldunits,
+                    basedir,
+                    ax=None,
+                    show=show,
+                    marker=marker,
                 )
 
     # remove temporary csv files
@@ -444,4 +503,4 @@ def plotTheta(
     # Force a garbage collection
     collected = gc.collect()
     if verbose:
-        print(f"Garbage collector: collected {collected} objects.")
+        print(f"Garbage collector: collected {collected} objects.", flush=True)

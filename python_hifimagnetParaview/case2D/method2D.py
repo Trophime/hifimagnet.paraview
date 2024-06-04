@@ -6,6 +6,13 @@ import copy
 def create_dicts(ureg, distance_unit: str, basedir: str):
     # use r"$\theta$" for displaying units in mathplotlib
     fieldunits = {
+        "coord": {
+            "Symbol": "r",
+            "Units": [
+                ureg.meter,
+                ureg.Unit(distance_unit),
+            ],
+        },
         "VolumicMass": {
             "Symbol": "rho",
             "mSymbol": r"$\rho$",
@@ -367,6 +374,7 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
         "Cos",
         "Sin",
         "cfpdes.pid",
+        "coord",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:

@@ -61,6 +61,12 @@ def options(description: str, epilog: str):
             "--plots", help="activate plots calculations", action="store_true"
         )
         allparsers.add_argument(
+            "--plotsMarker",
+            help="Choose marker for plots calculations",
+            type=str,
+            default="",
+        )
+        allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
         )
         allparsers.add_argument(
@@ -133,7 +139,7 @@ def main():
     match args.dimmension:
         case "3D":
             from .meshinfo import meshinfo
-            from .case3D.plot import plotTheta, plotOr, plotOz
+            from .case3D.plot import plotOr, plotTheta, plotOz
             from .case3D.display3D import makeview
             from .case3D.method3D import create_dicts
 
@@ -141,7 +147,7 @@ def main():
             axis = False
         case "2D":
             from .meshinfo import meshinfo
-            from .case2D.plot import plotTheta, plotOr
+            from .case2D.plot import plotOr, plotTheta
             from .case2D.display2D import makeview
             from .case2D.method2D import create_dicts
 
@@ -149,7 +155,7 @@ def main():
             axis = False
         case "Axi":
             from .meshinfoAxi import meshinfo
-            from .caseAxi.plot import plotOz, plotOr
+            from .caseAxi.plot import plotOr, plotOz
             from .case2D.display2D import makeview
             from .caseAxi.methodAxi import create_dicts
 
@@ -203,22 +209,102 @@ def main():
 
     # Plots
     if args.plots:
-        if args.r:
-            if axis:
+        if axis:
+            if args.r and args.z:
                 print(f"plots: r={args.r}, z={args.z}")
-                # plotOr(reader, r, z, show=(not args.save))# with r=[r1, r2], z: float
-                # plotOz(reader, r, z, show=(not args.save)) # with r: float, z=[z1,z2]
-            elif dim == 3 and args.z:
-                for z in args.z:
+                if len(args.r) == 2:
+                    for z in args.z:
+                        plotOr(
+                            reader,
+                            args.r,
+                            None,
+                            z,
+                            fieldunits,
+                            ignored_keys,
+                            basedir,
+                            show=(not args.save),
+                            marker=args.plotsMarker,
+                        )  # with r=[r1, r2], z: float
+                if len(args.z) == 2:
                     for r in args.r:
-                        plotTheta(cellsize, r, z, show=(not args.save))
-            elif dim == 2:
+                        plotOz(
+                            reader,
+                            r,
+                            None,
+                            args.z,
+                            fieldunits,
+                            ignored_keys,
+                            basedir,
+                            show=(not args.save),
+                            marker=args.plotsMarker,
+                        )  # with r: float, z=[z1,z2]
+        elif dim == 3:
+            if args.r and args.z:
                 for r in args.r:
-                    plotTheta(cellsize, r, basedir, show=(not args.save))
+                    for z in args.z:
+                        plotTheta(
+                            cellsize,
+                            r,
+                            z,
+                            fieldunits,
+                            ignored_keys,
+                            basedir,
+                            show=(not args.save),
+                            marker=args.plotsMarker,
+                        )
+                    if args.theta and len(args.z) == 2:
+                        for theta in args.theta:
+                            plotOz(
+                                reader,
+                                r,
+                                theta,
+                                args.z,
+                                fieldunits,
+                                ignored_keys,
+                                basedir,
+                                show=(not args.save),
+                                marker=args.plotsMarker,
+                            )  # with r: float, z=[z1,z2]
+                if args.theta and len(args.r) == 2:
                     for theta in args.theta:
-                        plotOr(cellsize, r, theta, basedir, show=(not args.save))
-        # add plotOr
-        # add plotOz
+                        for z in args.z:
+                            plotOr(
+                                reader,
+                                args.r,
+                                theta,
+                                z,
+                                fieldunits,
+                                ignored_keys,
+                                basedir,
+                                show=(not args.save),
+                                marker=args.plotsMarker,
+                            )  # with r=[r1, r2], z: float
+        elif dim == 2:
+            if args.r:
+                for r in args.r:
+                    plotTheta(
+                        cellsize,
+                        r,
+                        None,
+                        fieldunits,
+                        ignored_keys,
+                        basedir,
+                        show=(not args.save),
+                        marker=args.plotsMarker,
+                    )
+                if args.theta and len(args.r) == 2:
+                    for theta in args.theta:
+                        plotOr(
+                            cellsize,
+                            args.r,
+                            theta,
+                            None,
+                            fieldunits,
+                            ignored_keys,
+                            basedir,
+                            show=(not args.save),
+                            marker=args.plotsMarker,
+                        )  # with r=[r1, r2]
 
     # When dealing with elasticity
     suffix = ""

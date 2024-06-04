@@ -25,10 +25,13 @@ def plotOr(
     input,
     r: list[float],
     theta: float,
+    z: float,
     fieldunits: dict,
+    ignored_keys: List[str],
     basedir: str,
     show: bool = True,
     printed: bool = True,
+    marker: str = None,
 ):
 
     os.makedirs(f"{basedir}/plots", exist_ok=True)
@@ -36,11 +39,15 @@ def plotOr(
     [r0, r1] = r
     radian = theta * pi / 180.0
 
-    plotOverLine = PlotOverLine(registrationName="Oz", Input=input, Source="Line")
+    cellDatatoPointData1 = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+
+    plotOverLine = PlotOverLine(registrationName="Oz", Input=cellDatatoPointData1)
 
     # init the 'Line' selected for 'Source'
-    plotOverLine.Source.Point1 = [r0 * cos(radian), r0 * sin(radian), 0]
-    plotOverLine.Source.Point2 = [r1 * cos(radian), r1 * sin(radian), 0]
+    plotOverLine.Point1 = [r0 * cos(radian), r0 * sin(radian), 0]
+    plotOverLine.Point2 = [r1 * cos(radian), r1 * sin(radian), 0]
 
     filename = f"{basedir}/plots/r0={r0}m-r1={r1}m-theta={theta}deg.csv"
     export = CreateWriter(filename, proxy=plotOverLine)
@@ -59,6 +66,7 @@ def plotOr(
         basedir: str,
         ax=None,
         show: bool = True,
+        marker: str = None,
     ):
 
         print(f"plotOrField: file={file}, key={key}", flush=True)
@@ -97,7 +105,7 @@ def plotOr(
         ndf = {key: [val for val in out_values]}
 
         keycsv[key] = ndf[key]
-        keycsv.plot(x="r", y=key, marker="o", grid=True, ax=ax)
+        keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
 
         plt.xlabel("r [m]")
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
@@ -108,40 +116,57 @@ def plotOr(
         if show:
             plt.show()
         else:
+            plt.tight_layout()
             plt.savefig(f"{basedir}/plots/{key}-vs-r-theta={theta}deg.png", dpi=300)
         plt.close()
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}deg.csv")
         pass
 
     # requirements: create PointData from CellData
-    for field in input.PointData:
-        plotOrField(
-            filename,
-            field,
-            theta,
-            fieldunits,
-            basedir,
-            ax=None,
-            show=show,
-        )
+    # for field in input.PointData.keys():
+    datadict = resultinfo(cellDatatoPointData1, ignored_keys)
+    for field in datadict["PointData"]["Arrays"]:
+        if not field in ignored_keys:
+            kdata = datadict["PointData"]["Arrays"][field]
+            Components = kdata["Components"]
+            print(f"plotOrField for {field} - components={Components}", flush=True)
+            if Components > 1:
+                for i in range(Components):
+                    print(f"plotOrField for {field}:{i} skipped", flush=True)
+            else:
+                plotOrField(
+                    filename,
+                    field,
+                    theta,
+                    fieldunits,
+                    basedir,
+                    ax=None,
+                    show=show,
+                    marker=marker,
+                )
 
     # remove temporary csv files
     os.remove(filename)
 
     Delete(plotOverLine)
     del plotOverLine
+
+    Delete(cellDatatoPointData1)
+    del cellDatatoPointData1
     pass
 
 
 def plotTheta(
     input,
     r: float,
+    z: float,
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
     show: bool = True,
     printed: bool = True,
     verbose: bool = False,
+    marker: str = None,
 ):
     """
     for theta, need to apply CellDataToPointData filter
@@ -160,35 +185,20 @@ def plotTheta(
 
     files = []
     for i, clip in enumerate([clip_down, clip_up]):
-        slice = makecylinderslice(clip, f"slice{i}", r)
-        SetActiveSource(slice)
+        if clip.PointData.keys():
+            slice = makecylinderslice(clip, f"slice{i}", r)
+            SetActiveSource(slice)
 
-        plotOnIntersectionCurve = PlotOnIntersectionCurves(
-            registrationName=f"PlotOnIntersectionCurves{i}", Input=slice
-        )
-        # get params list
-        if not printed:
-            for prop in plotOnIntersectionCurve.ListProperties():
-                print(
-                    f"plotOnIntersectionCurve: {prop}={plotOnIntersectionCurve.GetPropertyValue(prop)}",
-                    flush=True,
-                )
-
-        plotOnIntersectionCurve.SliceType = "Plane"
-        # Properties modified on plotOnIntersectionCurves1.SliceType
-        plotOnIntersectionCurve.SliceType.Origin = [0.0, 0.0, 0]
-        plotOnIntersectionCurve.SliceType.Normal = [0.0, 0.0, 1.0]
-
-        # plotOnIntersectionCurves.append(plotOnIntersectionCurve)
-        export = CreateWriter(
-            f"{basedir}/plots/r={r}m-{i}.csv", proxy=plotOnIntersectionCurve
-        )
-        if not printed:
-            for prop in export.ListProperties():
-                print(f"export: {prop}={export.GetPropertyValue(prop)}", flush=True)
-        export.UpdateVTKObjects()  # is it needed?
-        export.UpdatePipeline()
-        files.append(f"{basedir}/plots/r={r}m-{i}.csv")
+            export = CreateWriter(
+                f"{basedir}/plots/r={r}m-{i}.csv",
+                proxy=slice,
+            )
+            if not printed:
+                for prop in export.ListProperties():
+                    print(f"export: {prop}={export.GetPropertyValue(prop)}", flush=True)
+            export.UpdateVTKObjects()  # is it needed?
+            export.UpdatePipeline()
+            files.append(f"{basedir}/plots/r={r}m-{i}.csv")
 
     # plot with matplotlib
     def plotThetaField(
@@ -199,6 +209,7 @@ def plotTheta(
         basedir: str,
         ax=None,
         show: bool = True,
+        marker: str = None,
     ):
 
         print(f"plotThetaField: files={files}, key={key}, show={show}", flush=True)
@@ -223,7 +234,7 @@ def plotTheta(
         keycsv_dfs = []
         for file in files:
             csv = pd.read_csv(file)
-            keycsv = csv[["Points:0", "Points:1", "arc_length", key]]
+            keycsv = csv[["Points:0", "Points:1", key]]
 
             # rename columns
             keycsv.rename(columns={"Points:0": "x", "Points:1": "y"}, inplace=True)
@@ -262,15 +273,15 @@ def plotTheta(
         # print(f"df keys: {df.columns.values.tolist()}", flush=True)
         # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
         # print(f"df={df}", flush=True)
-        df.plot(x="theta", y=key, marker="o", grid=True, ax=ax)
+        df.plot(x="theta", y=key, marker=marker, grid=True, ax=ax)
 
         plt.xlabel(r"$\theta$ [deg]")
         plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
 
         # x range
-        x0 = -180
-        x1 = 180
-        plt.xlim(x0, x1)
+        # x0 = -180
+        # x1 = 180
+        # plt.xlim(x0, x1)
 
         ax.yaxis.set_major_locator(MaxNLocator(10))
         plt.title(f"{key}: r={r_mm} {mm}")
@@ -278,6 +289,7 @@ def plotTheta(
         if show:
             plt.show()
         else:
+            plt.tight_layout()
             plt.savefig(f"{basedir}/plots/{key}-vs-theta-r={r_mm}{mm}.png", dpi=300)
         plt.close()
 
@@ -298,7 +310,16 @@ def plotTheta(
                 # for i in range(Components):
                 #     plotThetaField(files, f"{field}:{i}", r, z, ax=None, show=show)
             else:
-                plotThetaField(files, field, r, fieldunits, basedir, ax=None, show=show)
+                plotThetaField(
+                    files,
+                    field,
+                    r,
+                    fieldunits,
+                    basedir,
+                    ax=None,
+                    show=show,
+                    marker=marker,
+                )
 
     # remove temporary csv files
     for file in files:
