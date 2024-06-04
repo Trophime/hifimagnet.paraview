@@ -1,4 +1,5 @@
 import os
+import gc
 
 from paraview.simple import (
     BoundingRuler,
@@ -12,6 +13,7 @@ from paraview.simple import (
     HideScalarBarIfNotNeeded,
     GetOpacityTransferFunction,
     SaveScreenshot,
+    ExtractBlock,
 )
 
 from ..method import selectBlocks, convert_data
@@ -39,6 +41,7 @@ def displayField(
     grid: bool = False,
     polargrid: bool = False,
     printed: bool = True,
+    excludeBlocks: bool = False,
 ):
     """
     display field in renderview
@@ -106,7 +109,7 @@ def displayField(
         azimuth=azimuth,
     )  # adjustCamera)
 
-    resolution = [1200, 1200]
+    resolution = [1400, 1200]
     renderView.ViewSize = resolution
     if not printed:
         for prop in renderView.ListProperties():
@@ -120,6 +123,19 @@ def displayField(
     LUT = GetColorTransferFunction(field_name)
     LUT.ScalarRangeInitialized = 1.0
 
+    if excludeBlocks:
+        extractBlock1 = ExtractBlock(registrationName="insert", Input=input)
+        extractBlock1.Selectors = selectedblocks
+        extractBlock1.UpdatePipeline()
+        if field in list(extractBlock1.CellData.keys()):
+            arrayInfo = extractBlock1.CellData[field]
+        if field in list(extractBlock1.PointData.keys()):
+            arrayInfo = extractBlock1.PointData[field]
+        r = arrayInfo.GetRange(0)
+        LUT.RescaleTransferFunction(r[0], r[1])
+        Delete(extractBlock1)
+        del extractBlock1
+        collected = gc.collect()
     # LUT.RescaleTransferFunction(293.6058044433594, 397.88848876953125)
     # valid range for temperature but where do the range come from?
     # see post https://stackoverflow.com/questions/63028755/paraview-rescaling-colour-scheme-to-visible-data-in-range-in-python
@@ -129,6 +145,7 @@ def displayField(
 
     # Hide the scalar bar for this color map if no visible data is colored by it.
     HideScalarBarIfNotNeeded(LUT, renderView)
+    LUT.ApplyPreset("Rainbow Uniform", True)
 
     # get color legend/bar for LUT in view renderView1
     LUTColorBar = GetScalarBar(LUT)
@@ -157,21 +174,21 @@ def displayField(
     LUTColorBar.TitleBold = 1
     LUTColorBar.TitleItalic = 1
     # LUTColorBar.TitleShadow = 1
-    LUTColorBar.TitleFontSize = 24
+    LUTColorBar.TitleFontSize = 30
     LUTColorBar.HorizontalTitle = 1
     LUTColorBar.LabelColor = [0.0, 0.0, 0.0]
     # LUTColorBar.LabelFontFamily = 'Courier'
     LUTColorBar.LabelBold = 1
     # LUTColorBar.LabelItalic = 1
     # LUTColorBar.LabelShadow = 1
-    LUTColorBar.LabelFontSize = 20
+    LUTColorBar.LabelFontSize = 30
     LUTColorBar.ScalarBarThickness = 32
-    LUTColorBar.ScalarBarLength = 0.5
+    LUTColorBar.ScalarBarLength = 0.9
     LUTColorBar.AutomaticLabelFormat = 0
     # LUTColorBar.LabelFormat = '%-#6.2g'
-    # LUTColorBar.RangeLabelFormat = '%-#6.1f'
-    # LUTColorBar.DataRangeLabelFormat = '%-#5.2f'
-    # LUTColorBar.DrawDataRange = 1
+    LUTColorBar.RangeLabelFormat = "%-#6.3g"
+    LUTColorBar.DataRangeLabelFormat = "%-#6.3e"
+    LUTColorBar.DrawDataRange = 1
     # LUTColorBar.AddRangeAnnotations = 1
     # LUTColorBar.DrawAnnotations = 0
     # LUTColorBar.TextPosition = "Ticks left/bottom, annotations right/top"
@@ -229,7 +246,10 @@ def make3Dview(
         (toolbox, physic, fieldname) = keyinfo
     else:
         raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
-    print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
+    excludeBlocks = False
+    if fieldunits[fieldname]["Exclude"]:
+        excludeBlocks = True
+        print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     boxclip = makeboxclip(input, "boxclip")
     selectedblocks = selectBlocks(
@@ -256,6 +276,7 @@ def make3Dview(
         parallelProjection=False,
         roll=90,
         elevation=300,
+        excludeBlocks=excludeBlocks,
     )
 
     Delete(renderView)
