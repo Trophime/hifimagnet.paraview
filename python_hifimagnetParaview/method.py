@@ -1,5 +1,6 @@
 import gc
 import os
+import re
 from typing import List
 
 from paraview.simple import (
@@ -55,7 +56,15 @@ def selectBlocks(blockdata: list, excludes: list):
     excludes: list of names to be excluded
 
     """
-
+    isolants = []
+    if "Isolant" in excludes:
+        isolants = [
+            r"/Root/\w+_B0",
+            r"/Root/\w+_B4",
+            r"/Root/\w*H\d+_Cu0",
+            r"/Root/\w*H\d+_Cu21",
+            r"/Root/\w*R\d+",
+        ]
     selectedblocks = []
     for key in blockdata:
         found = False
@@ -63,6 +72,12 @@ def selectBlocks(blockdata: list, excludes: list):
             if excluded in key:
                 found = True
                 break
+        if isolants:
+            for excluded in isolants:
+                regex = re.compile(excluded)
+                if regex.match(key):
+                    found = True
+                    break
         if not found:
             selectedblocks.append(key)
 
