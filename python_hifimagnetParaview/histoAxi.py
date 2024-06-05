@@ -34,7 +34,7 @@ def plotHistoAxi(
     csv = pd.read_csv(filename)
     keys = csv.columns.values.tolist()
     # print(f"plotHistAxi: keys={keys}", flush=True)
-    # print("histo before scaling")
+    # print("histo before scaling",flush=True)
     # print(tabulate(csv, headers="keys", tablefmt="psql"))
 
     # get key unit
@@ -65,9 +65,9 @@ def plotHistoAxi(
         weights=csv["AxiVol"],
         rwidth=0.5,
     )
-    print(f"counts={counts}")
-    print(f"extend_bins={extend_bins}")
-    print(f"patches={patches}")
+    print(f"counts={counts}", flush=True)
+    print(f"extend_bins={extend_bins}", flush=True)
+    print(f"patches={patches}", flush=True)
 
     ticks = [(patch._x0 + patch._x0 + patch._width) / 2 for patch in patches]
     total_key = "Fraction of total Volume [%]"
@@ -131,16 +131,16 @@ def resultHistos(
 
     sum = csv["AxiVolume"].sum()
     csv["AxiVol"] = csv["AxiVolume"] / sum * 100
-    # print(f"Area={Area}, sum={sum}")
+    # print(f"Area={Area}, sum={sum}",flush=True)
 
     # check that sum is roughtly equal to 1
-    # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}')
+    # print(f'check Sum(Fraction): {csv["Fraction of total Area [%]"].sum()}',flush=True)
     eps = 1.0e-4
     error = abs(1 - csv["AxiVol"].sum() / 100.0)
     assert error <= eps, f"Check Sum(Fraction) failed (error={error} > eps={eps})"
 
     csv.to_csv(filename)
-    # print(f'Sum(AxiVol)={csv["AxiVol"].sum()}')
+    # print(f'Sum(AxiVol)={csv["AxiVol"].sum()}',flush=True)
 
     datadict = resultinfo(input, ignored_keys)
     for datatype in datadict:
@@ -172,7 +172,10 @@ def resultHistos(
     # Force a garbage collection
     collected = gc.collect()
     if verbose:
-        print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+        print(
+            f"resultsHistos: Garbage collector: collected {collected} objects.",
+            flush=True,
+        )
 
     # remove: f"{basedir}/histograms/{name}-Axi-cellcenters-all.csv"
     # os.remove(filename)

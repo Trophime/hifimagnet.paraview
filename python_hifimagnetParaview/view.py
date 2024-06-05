@@ -20,6 +20,8 @@ def deformed(input, factor: float = 1, printed: bool = True):
 
     warpByVector1 = WarpByVector(registrationName="WarpByVector1", Input=input)
     warpByVector1.Vectors = ["POINTS", "elasticity.displacement"]
+    if not warpByVector1.PointData.keys():
+        warpByVector1.Vectors = ["POINTS", "cfpdes.elastic.displacement"]
     warpByVector1.ScaleFactor = factor
     # get params list
     if not printed:

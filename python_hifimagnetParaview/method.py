@@ -225,7 +225,10 @@ def integrateKeys(
     integratedvalues = IntegrateVariables(Input=input)
     if not printed:
         for prop in integratedvalues.ListProperties():
-            print(f"integratedvalues: {prop}={integratedvalues.GetPropertyValue(prop)}")
+            print(
+                f"integratedvalues: {prop}={integratedvalues.GetPropertyValue(prop)}",
+                flush=True,
+            )
 
     spreadSheetView = CreateView("SpreadSheetView")
     spreadSheetView.FieldAssociation = "Cell Data"
@@ -249,6 +252,9 @@ def integrateKeys(
     # Force a garbage collection
     collected = gc.collect()
     if verbose:
-        print(f"integrateKeys: Garbage collector: collected {collected} objects.")
+        print(
+            f"integrateKeys: Garbage collector: collected {collected} objects.",
+            flush=True,
+        )
 
     return filename

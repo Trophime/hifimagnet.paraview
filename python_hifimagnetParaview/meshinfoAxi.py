@@ -35,7 +35,7 @@ def part_integrate(
     """
     compute integral over input
     """
-    print(f"part_integrate: name={name}")
+    print(f"part_integrate: name={name}", flush=True)
 
     # try to add Moment here
     # convert CellData to PointData
@@ -58,7 +58,7 @@ def part_integrate(
     drop_keys = []
     for field in tmp.PointData:
         fname = f'"{field.Name}"'
-        # print(f"fname={fname}, components={field.GetNumberOfComponents()}")
+        # print(f"fname={fname}, components={field.GetNumberOfComponents()}",flush=True)
         if field.GetNumberOfComponents() > 1:
             fname = f'mag("{field.Name}")'
             for i in range(field.GetNumberOfComponents()):
@@ -89,7 +89,7 @@ def part_integrate(
     # get integrated values
     csvfile = integrateKeys(tmp, name, basedir, verbose=verbose)
     csv = pd.read_csv(csvfile)
-    # print(f"integrateKeys: csv={list(csv.keys())}")
+    # print(f"integrateKeys: csv={list(csv.keys())}",flush=True)
     drop_keys += ["Cell ID", "Area", "Cell Type"]
     # print(f"drop_keys={drop_keys}", flush=True)
     csv.drop(columns=drop_keys, inplace=True)
@@ -112,7 +112,10 @@ def part_integrate(
     # Force a garbage collection
     collected = gc.collect()
     if verbose:
-        print(f"resultsHistos: Garbage collector: collected {collected} objects.")
+        print(
+            f"resultsHistos: Garbage collector: collected {collected} objects.",
+            flush=True,
+        )
 
     return csv
 
@@ -165,11 +168,11 @@ def part(
         block = dataset.GetBlock(0)
 
     Area_data = block.GetPointData().GetArray("AxiVolume")
-    # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}')
+    # print(f'block cellData[Area_data]: {Area_data}, type={type(Area_data)}',flush=True)
     Area = block.GetPointData().GetArray("AxiVolume")
-    # print(f'block fieldData[Area]: {Area}, type={type(Area)}')
+    # print(f'block fieldData[Area]: {Area}, type={type(Area)}',flush=True)
     np_Area = np_dataset.PointData["AxiVolume"]
-    # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}')
+    # print(f'block fieldData[np_Area]: {np_Area}, type={type(np_Area)}, length={algs.shape(np_Area)}',flush=True)
     vol = algs.sum(np_Area)
     vunits = fieldunits["Volume"]["Units"]
     mm3 = f"{vunits[1]:~P}"
@@ -179,12 +182,13 @@ def part(
         "Volume",
     )
     print(
-        f"{name}: block fieldData[np_Area]: vol={vol_mm3} {mm3}, parts={algs.shape(np_Area)}"
+        f"{name}: block fieldData[np_Area]: vol={vol_mm3} {mm3}, parts={algs.shape(np_Area)}",
+        flush=True,
     )
 
     # # check tvol == Sum(vol)
     # if abs(1 - vol / tvol) > 1.0e-3:
-    #     print(f"insert Total volume != vol(insert), tvol={tvol}, vol={vol}, error={abs(1-vol/tvol)*100} %")
+    #     print(f"insert Total volume != vol(insert), tvol={tvol}, vol={vol}, error={abs(1-vol/tvol)*100} %",flush=True)
 
     statsdict = resultStats(
         calculator1,
@@ -217,7 +221,7 @@ def part(
     # Force a garbage collection
     collected = gc.collect()
     if verbose:
-        print(f"part: Garbage collector: collected {collected} objects.")
+        print(f"part: Garbage collector: collected {collected} objects.", flush=True)
 
     return vol, statsdict
 
@@ -264,7 +268,7 @@ def meshinfo(
         registrationName="PointDatatoCellData", Input=input
     )
 
-    print("Get mesh size")
+    print("Get mesh size", flush=True)
     cellsize = CellSize(pointDatatoCellData)  # input
 
     # set some params
@@ -276,7 +280,7 @@ def meshinfo(
     # get params list
     if not printed:
         for prop in cellsize.ListProperties():
-            print(f"cellsize: {prop}={cellsize.GetPropertyValue(prop)}")
+            print(f"cellsize: {prop}={cellsize.GetPropertyValue(prop)}", flush=True)
 
     # apply
     cellsize.UpdatePipeline()
@@ -301,10 +305,10 @@ def meshinfo(
     # check dataset type
     # print(f"type(dataset)={type(dataset)}", flush=True)
     if dataset.IsA("vtkUnstructuredGrid"):
-        # print("UnstructuredGrid")
+        # print("UnstructuredGrid",flush=True)
         block = dataset
     elif dataset.IsA("vtkMultiBlockDataSet"):
-        # print("MultiBlockDataSet")
+        # print("MultiBlockDataSet",flush=True)
         block = dataset.GetBlock(0)
 
     Area_data = block.GetPointData().GetArray("AxiVolume")

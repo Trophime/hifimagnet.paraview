@@ -118,7 +118,7 @@ def main():
 
     basedir = f"{os.path.dirname(args.file)}/paraview.exports"
     # basedir = os.path.dirname(args.file).replace(f"{toolbox}.export", "paraview.export")
-    print("Results are stored in: ", basedir)
+    print("Results are stored in: ", basedir, flush=True)
     os.makedirs(basedir, exist_ok=True)
 
     # Pint configuration
@@ -168,13 +168,13 @@ def main():
 
     # check paraview version
     version = GetParaViewVersion()
-    print(f"Paraview version: {version}")
+    print(f"Paraview version: {version}", flush=True)
 
     # args.file = "../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case"
     reader = load(args.file)
-    # print(f"help(reader) = {dir(reader)}")
+    # print(f"help(reader) = {dir(reader)}",flush=True)
     bounds = getbounds(reader)
-    print(f"bounds={bounds}")  # , type={type(bounds)}")
+    print(f"bounds={bounds}", flush=True)  # , type={type(bounds)}",flush=True)
     info(reader)
     color = None
     CellToData = False
@@ -211,7 +211,7 @@ def main():
     if args.plots:
         if axis:
             if args.r and args.z:
-                print(f"plots: r={args.r}, z={args.z}")
+                print(f"plots: r={args.r}, z={args.z}", flush=True)
                 if len(args.r) == 2:
                     for z in args.z:
                         plotOr(
@@ -315,12 +315,12 @@ def main():
         if field.endswith("displacement"):
             found = True
             break
-    print(f"displacement found={found} in {list(reader.PointData.keys())}")
+    print(f"displacement found={found} in {list(reader.PointData.keys())}", flush=True)
 
     if found and (dim == 3 or axis):
         # make3Dview(cellsize, blockdata, key, color, addruler=True)
         if args.channels:
-            print("Save stl for original geometries:")
+            print("Save stl for original geometries:", flush=True)
             for i, block in enumerate(blockdata.keys()):
                 name = blockdata[block]["name"]
                 actual_name = name.replace("/root/", "")
@@ -346,7 +346,7 @@ def main():
         # compute channel deformation
         # use MeshLib see test-meshlib example
         if args.channels:
-            print("Save stl for deformed geometries:")
+            print("Save stl for deformed geometries:", flush=True)
             for i, block in enumerate(blockdata.keys()):
                 name = blockdata[block]["name"]
                 actual_name = name.replace("/root/", "")
@@ -373,7 +373,7 @@ def main():
     elif found and dim == 2 and not axis:
         cellsize_deformed = deformed(cellsize, factor=1)
 
-        # suffix = "-deformed"
+        suffix = "-deformed"
         # cellsize = geometry
 
     # Views
