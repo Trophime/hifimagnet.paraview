@@ -2,6 +2,51 @@
 
 This directory contains scripts useful for post-processing feelpp results with Paraview
 
+## `python_hifimagnetParaview.cli`:
+
+* get range per PointData, CellData
+* compute stats per PointData, CellData for insert
+* compute histogram per PointData, CellData for insert
+* display 3D/2D/Axi view
+* display 2D OrOz view for theta in 
+
+All data file are saved in csv format for other use.
+
+Required
+* `dimmension`: choose between 3D, 2D or Axi
+* `file`: input case file (ex. Export.case)
+
+Optional
+* `--views`: 
+    * `--field`: select a field, by default get first PointData array
+* `--stats`: 
+    * compute stats per PointData, CellData per block (aka `feelpp` marker) 
+* `--histos`: 
+    * compute histogram per PointData, CellData per block (aka `feelpp` marker)
+* `--plots`: 
+    * `--z`: 
+    * `--theta`: 
+    * `--r`: 
+    * `--save`: save plots  
+ 
+help
+
+```bash
+pvbatch -m python_hifimagnetParaview.cli --help
+pvbatch -m python_hifimagnetParaview.cli 3D --help
+pvbatch -m python_hifimagnetParaview.cli 2D --help
+pvbatch -m python_hifimagnetParaview.cli Axi --help
+```
+
+examples
+
+```bash
+pvbatch -m python_hifimagnetParaview.cli 3D  ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --plots --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 --save
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --views
+pvbatch -m python_hifimagnetParaview.cli Axi  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --stats --histos
+```
+
+
 ## `pv-statistics`:
 
 * get range per PointData, CellData
