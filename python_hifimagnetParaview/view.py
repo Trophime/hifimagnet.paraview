@@ -1,3 +1,5 @@
+import numpy as np
+
 from paraview.simple import (
     Clip,
     Slice,
@@ -55,6 +57,36 @@ def makeclip(input, name: str, invert: bool = True, printed: bool = True):
     # init the 'Plane' selected for 'ClipType'
     clip.ClipType.Origin = [0.0, 0.0, 0.0]
     clip.ClipType.Normal = [0.0, 1.0, 0.0]
+    clip.Invert = 1
+    if invert:
+        clip.Invert = 0
+
+    # get params list
+    if not printed:
+        for prop in clip.ListProperties():
+            print(f"clip: {prop}={clip.GetPropertyValue(prop)}", flush=True)
+
+    # init the 'Plane' selected for 'HyperTreeGridClipper'
+    clip.HyperTreeGridClipper.Origin = [0.0, 0.0, 0.0]
+
+    clip.UpdatePipeline()
+    return clip
+
+
+def makethetaclip(input, theta: float, invert: bool = True, printed: bool = True):
+    """
+    create a plane clip from input dataset
+    """
+    print(f"makeclip: theta={theta}°, invert={invert}", flush=True)
+    radian = theta * np.pi / 180.0
+    clip = Clip(registrationName="Cliptheta", Input=input)
+    clip.ClipType = "Plane"
+    clip.HyperTreeGridClipper = "Plane"
+
+    # init the 'Plane' selected for 'ClipType'
+    clip.ClipType.Origin = [0.0, 0.0, 0.0]
+    clip.ClipType.Normal = [-np.sin(radian), np.cos(radian), 0.0]
+
     clip.Invert = 1
     if invert:
         clip.Invert = 0
