@@ -11,8 +11,8 @@ from paraview.simple import (
 
 
 from .method import load, info, getbounds, resultinfo
-from .view import deformed
-
+from .view import deformed, makethetaclip
+from .json import returnExportFields
 
 pd.options.mode.copy_on_write = True
 
@@ -69,6 +69,13 @@ def options(description: str, epilog: str):
         allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
         )
+
+        allparsers.add_argument(
+            "--cliptheta",
+            type=float,
+            help="select theta in deg to display",
+            default=None,
+        )
         allparsers.add_argument(
             "--r", nargs="*", type=float, help="select r in m to display"
         )
@@ -94,6 +101,9 @@ def options(description: str, epilog: str):
             help="activate verbose mode",
             action="store_true",
         )
+        allparsers.add_argument(
+            "--json", type=str, help="input json file for fieldunits", default=None
+        )
 
     # TODO get Exports section from json model file
     # data['PostProcess'][method_params[0]]['Exports']['expr']?
@@ -106,17 +116,12 @@ def options(description: str, epilog: str):
     return parser
 
 
-def main():
-
-    parser = options("", "")
-    argcomplete.autocomplete(parser)
-    args = parser.parse_args()
-    print(f"args: {args}")
-
+def init(file: str):
     # get current working directory
     cwd = os.getcwd()
+    print("workingdir=", cwd)
 
-    basedir = f"{os.path.dirname(args.file)}/paraview.exports"
+    basedir = f"{os.path.dirname(file)}/paraview.exports"
     # basedir = os.path.dirname(args.file).replace(f"{toolbox}.export", "paraview.export")
     print("Results are stored in: ", basedir, flush=True)
     os.makedirs(basedir, exist_ok=True)
@@ -131,17 +136,35 @@ def main():
     # set default output unit to millimeter
     distance_unit = "millimeter"  # or "meter"
 
-    # fieldunits: dict( Quantity: symbol: str, units: [ in_unit, out_unit ]
-    # !!! watchout matplotlib setup for latex support and packages required !!!
+    # check paraview version
+    version = GetParaViewVersion()
+    print(f"Paraview version: {version}", flush=True)
 
-    # build fieldunits when creating setup and store as a json
-    # load json
+    # args.file = "../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case"
+    reader = load(file)
+    # print(f"help(reader) = {dir(reader)}",flush=True)
+    bounds = getbounds(reader)
+    print(f"bounds={bounds}", flush=True)  # , type={type(bounds)}",flush=True)
+    info(reader)
+    # color = None
+    # CellToData = False
+
+    return cwd, basedir, ureg, distance_unit, reader
+
+
+def main():
+
+    parser = options("", "")
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args()
+    print(f"args: {args}")
+
     match args.dimmension:
         case "3D":
             from .meshinfo import meshinfo
             from .case3D.plot import plotOr, plotTheta, plotOz
             from .case3D.display3D import makeview
-            from .case3D.method3D import create_dicts
+            from .case3D.method3D import create_dicts, create_dicts_fromjson
 
             dim = 3
             axis = False
@@ -149,7 +172,7 @@ def main():
             from .meshinfo import meshinfo
             from .case2D.plot import plotOr, plotTheta
             from .case2D.display2D import makeview
-            from .case2D.method2D import create_dicts
+            from .case2D.method2D import create_dicts, create_dicts_fromjson
 
             dim = 2
             axis = False
@@ -157,27 +180,26 @@ def main():
             from .meshinfoAxi import meshinfo
             from .caseAxi.plot import plotOr, plotOz
             from .case2D.display2D import makeview
-            from .caseAxi.methodAxi import create_dicts
+            from .caseAxi.methodAxi import create_dicts, create_dicts_fromjson
 
             dim = 2
             axis = True
         case _:
             pass
 
-    fieldunits, ignored_keys = create_dicts(ureg, distance_unit, basedir)
+    (cwd, basedir, ureg, distance_unit, reader) = init(args.file)
 
-    # check paraview version
-    version = GetParaViewVersion()
-    print(f"Paraview version: {version}", flush=True)
+    if args.json:
+        fieldtype = returnExportFields(args.json, basedir)
+        fieldunits, ignored_keys = create_dicts_fromjson(
+            fieldtype, ureg, distance_unit, basedir
+        )
+    else:
+        fieldunits, ignored_keys = create_dicts(ureg, distance_unit, basedir)
 
-    # args.file = "../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case"
-    reader = load(args.file)
-    # print(f"help(reader) = {dir(reader)}",flush=True)
-    bounds = getbounds(reader)
-    print(f"bounds={bounds}", flush=True)  # , type={type(bounds)}",flush=True)
-    info(reader)
-    color = None
-    CellToData = False
+    if dim == 2 and args.cliptheta:
+        reader = makethetaclip(reader, args.cliptheta, invert=False)
+
     if args.field:
         if args.field in list(reader.CellData.keys()):
             field = reader.CellData[args.field]
@@ -281,17 +303,18 @@ def main():
                             )  # with r=[r1, r2], z: float
         elif dim == 2:
             if args.r:
-                for r in args.r:
-                    plotTheta(
-                        cellsize,
-                        r,
-                        None,
-                        fieldunits,
-                        ignored_keys,
-                        basedir,
-                        show=(not args.save),
-                        marker=args.plotsMarker,
-                    )
+                if len(args.r) != 2 or not args.theta:
+                    for r in args.r:
+                        plotTheta(
+                            cellsize,
+                            r,
+                            None,
+                            fieldunits,
+                            ignored_keys,
+                            basedir,
+                            show=(not args.save),
+                            marker=args.plotsMarker,
+                        )
                 if args.theta and len(args.r) == 2:
                     for theta in args.theta:
                         plotOr(
@@ -428,6 +451,10 @@ def main():
             if args.field in list(cellsize.PointData.keys()) + list(
                 cellsize.CellData.keys()
             ):
+                if args.field in list(cellsize.CellData.keys()):
+                    color = ["CELLS", args.field]
+                if args.field in list(cellsize.PointData.keys()):
+                    color = ["POINTS", args.field]
                 makeview(
                     args,
                     cellsize,
@@ -445,6 +472,10 @@ def main():
                 in list(cellsize_deformed.PointData.keys())
                 + list(cellsize_deformed.CellData.keys())
             ):
+                if args.field in list(cellsize_deformed.CellData.keys()):
+                    color = ["CELLS", args.field]
+                if args.field in list(cellsize_deformed.PointData.keys()):
+                    color = ["POINTS", args.field]
                 makeview(
                     args,
                     cellsize_deformed,
