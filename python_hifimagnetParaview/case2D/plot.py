@@ -96,6 +96,7 @@ def plotOr(
 
         # rename columns
         keycsv.rename(columns={"arc_length": "r"}, inplace=True)
+        keycsv["r"] = keycsv["r"] + r0
         # print(f"new keys: {keycsv.columns.values.tolist()}")
 
         # rescale columns to plot
