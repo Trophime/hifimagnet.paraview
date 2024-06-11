@@ -93,6 +93,8 @@ def displayField(
     LUT = GetColorTransferFunction(field_name)
     LUT.ScalarRangeInitialized = 1.0
 
+    if input.GetDataInformation().DataInformation.GetNumberOfUniqueBlockTypes() == 0:
+        excludeBlocks = False
     if excludeBlocks:
         extractBlock1 = ExtractBlock(registrationName="insert", Input=input)
         extractBlock1.Selectors = selectedblocks
@@ -123,7 +125,9 @@ def displayField(
 
     keyinfo = field.split(".")
     print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 2:
+    if len(keyinfo) == 1:
+        fieldname = field
+    elif len(keyinfo) == 2:
         (physic, fieldname) = keyinfo
     elif len(keyinfo) == 3:
         (toolbox, physic, fieldname) = keyinfo
@@ -210,7 +214,9 @@ def make2Dview(
 
     keyinfo = field.split(".")
     print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 2:
+    if len(keyinfo) == 1:
+        fieldname = field
+    elif len(keyinfo) == 2:
         (physic, fieldname) = keyinfo
     elif len(keyinfo) == 3:
         (toolbox, physic, fieldname) = keyinfo

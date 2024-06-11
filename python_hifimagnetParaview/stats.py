@@ -95,7 +95,9 @@ def createStatsTable(
             toolbox = ""
             keyinfo = key.split(".")
             print(f"keyinfo={keyinfo}", flush=True)
-            if len(keyinfo) == 2:
+            if len(keyinfo) == 1:
+                fieldname = key
+            elif len(keyinfo) == 2:
                 (physic, fieldname) = keyinfo
             elif len(keyinfo) == 3:
                 (toolbox, physic, fieldname) = keyinfo
@@ -342,7 +344,9 @@ def resultStats(
                     found = False
                     keyinfo = key.split(".")
                     # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 2:
+                    if len(keyinfo) == 1:
+                        fieldname = key
+                    elif len(keyinfo) == 2:
                         (physic, fieldname) = keyinfo
                     elif len(keyinfo) == 3:
                         (toolbox, physic, fieldname) = keyinfo

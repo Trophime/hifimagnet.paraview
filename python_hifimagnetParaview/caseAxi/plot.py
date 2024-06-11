@@ -62,7 +62,9 @@ def plotOr(
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.replace("_Magnitude", "").split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 2:
+        if len(keyinfo) == 1:
+            fieldname = field
+        elif len(keyinfo) == 2:
             (physic, fieldname) = keyinfo
         elif len(keyinfo) == 3:
             (toolbox, physic, fieldname) = keyinfo
@@ -180,7 +182,9 @@ def plotOz(
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.replace("_Magnitude", "").split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 2:
+        if len(keyinfo) == 1:
+            fieldname = field
+        elif len(keyinfo) == 2:
             (physic, fieldname) = keyinfo
         elif len(keyinfo) == 3:
             (toolbox, physic, fieldname) = keyinfo
