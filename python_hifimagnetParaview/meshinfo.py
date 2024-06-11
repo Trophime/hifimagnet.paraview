@@ -221,28 +221,31 @@ def meshinfo(
     # check dataset type
     if dataset.IsA("vtkUnstructuredGrid"):
         print("UnstructuredGrid", flush=True)
+        block = dataset
     elif dataset.IsA("vtkMultiBlockDataSet"):
         print("MultiBlockDataSet", flush=True)
         block = dataset.GetBlock(0)
-        grandeur_data = block.GetCellData().GetArray(grandeur)
-        # print(f'block cellData[{grandeur}_data]: {grandeur_data}, type={type(grandeur_data)}', flush=True)
-        AreaorVolume = block.GetFieldData().GetArray(grandeur)
-        # print(f'block fieldData[{grandeur}]: {AreaorVolume}, type={type(AreaorVolume)}', flush=True)
-        np_grandeur = np_dataset.FieldData[grandeur]
-        # print(f'block fieldData[np_{grandeur}]: {np_grandeur}, type={type(np_grandeur)}, length={algs.shape(np_grandeur)}', flush=True)
-        tvol = algs.sum(np_grandeur)
-        vunits = fieldunits[grandeur]["Units"]
-        mmdim = f"{vunits[1]:~P}"
-        tvol_mmdim = convert_data(
-            {grandeur: vunits},
-            tvol,
-            grandeur,
-        )
-        print(
-            f"block fieldData[np_{grandeur}]: total={tvol_mmdim} {mmdim}, parts={algs.shape(np_grandeur)}",
-            flush=True,
-        )
 
+    grandeur_data = block.GetCellData().GetArray(grandeur)
+    # print(f'block cellData[{grandeur}_data]: {grandeur_data}, type={type(grandeur_data)}', flush=True)
+    AreaorVolume = block.GetFieldData().GetArray(grandeur)
+    # print(f'block fieldData[{grandeur}]: {AreaorVolume}, type={type(AreaorVolume)}', flush=True)
+    np_grandeur = np_dataset.FieldData[grandeur]
+    # print(f'block fieldData[np_{grandeur}]: {np_grandeur}, type={type(np_grandeur)}, length={algs.shape(np_grandeur)}', flush=True)
+    tvol = algs.sum(np_grandeur)
+    vunits = fieldunits[grandeur]["Units"]
+    mmdim = f"{vunits[1]:~P}"
+    tvol_mmdim = convert_data(
+        {grandeur: vunits},
+        tvol,
+        grandeur,
+    )
+    print(
+        f"block fieldData[np_{grandeur}]: total={tvol_mmdim} {mmdim}, parts={algs.shape(np_grandeur)}",
+        flush=True,
+    )
+
+    if dataset.IsA("vtkMultiBlockDataSet"):
         hierarchy = dataInfo.GetHierarchy()
         rootnode = hierarchy.GetRootNode()
         rootSelector = f"/{hierarchy.GetRootNodeName()}"
@@ -521,4 +524,32 @@ def meshinfo(
             # aggregate stats data
             createStatsTable(stats, "total", fieldunits, basedir, ureg, verbose)
 
-    return cellsize, blockdata, dict()
+    elif dataset.IsA("vtkUnstructuredGrid"):
+        stats = []
+
+        print("Data ranges:", flush=True)
+        datadict = resultinfo(cellsize, ignored_keys, verbose)
+
+        statsdict = resultStats(
+            cellsize,
+            "insert",
+            dim,
+            tvol,
+            fieldunits,
+            ignored_keys,
+            ureg,
+            basedir,
+            histo=ComputeHisto,
+            BinCount=BinCount,
+            show=show,
+            verbose=verbose,
+        )
+        if verbose:
+            print(f"insert statsdict={statsdict}", flush=True)
+        stats.append(statsdict)
+
+        # aggregate stats data
+        if ComputeStats:
+            createStatsTable([statsdict], "insert", fieldunits, basedir, ureg, verbose)
+
+    return cellsize, blockdata, stats

@@ -305,10 +305,10 @@ def meshinfo(
     # check dataset type
     # print(f"type(dataset)={type(dataset)}", flush=True)
     if dataset.IsA("vtkUnstructuredGrid"):
-        # print("UnstructuredGrid",flush=True)
+        print("UnstructuredGrid", flush=True)
         block = dataset
     elif dataset.IsA("vtkMultiBlockDataSet"):
-        # print("MultiBlockDataSet",flush=True)
+        print("MultiBlockDataSet", flush=True)
         block = dataset.GetBlock(0)
 
     Area_data = block.GetPointData().GetArray("AxiVolume")
@@ -370,9 +370,9 @@ def meshinfo(
 
             sum_vol += vol
 
-        # # check tvol == Sum(vol)
-        # if abs(1 - sum_vol / tvol) > 1.0e-3:
-        #     print(f"Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %")
+            # # check tvol == Sum(vol)
+            # if abs(1 - sum_vol / tvol) > 1.0e-3:
+            #     print(f"Total volume != Sum(vol), tvol={tvol}, sum_vol={sum_vol}, error={abs(1-sum_vol/tvol)*100} %")
 
         # Compute Stats
         stats = []
@@ -419,7 +419,9 @@ def meshinfo(
                 if "Stats" in avalue:
                     keyinfo = array.split(".")
                     # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 2:
+                    if len(keyinfo) == 1:
+                        fieldname = array
+                    elif len(keyinfo) == 2:
                         (physic, fieldname) = keyinfo
                     elif len(keyinfo) == 3:
                         (toolbox, physic, fieldname) = keyinfo
@@ -504,7 +506,9 @@ def meshinfo(
                     if "Stats" in avalue:
                         keyinfo = array.split(".")
                         # print(f"keyinfo={keyinfo}", flush=True)
-                        if len(keyinfo) == 2:
+                        if len(keyinfo) == 1:
+                            fieldname = array
+                        elif len(keyinfo) == 2:
                             (physic, fieldname) = keyinfo
                         elif len(keyinfo) == 3:
                             (toolbox, physic, fieldname) = keyinfo
@@ -567,5 +571,91 @@ def meshinfo(
 
         # aggregate stats data
         createStatsTable(stats, "total", fieldunits, basedir, verbose)
+
+    if dataset.IsA("vtkUnstructuredGrid"):
+        stats = []
+
+        print("Data ranges:", flush=True)
+        resultinfo(calculator1, ignored_keys, verbose)
+        Delete(pointDatatoCellData)
+        del pointDatatoCellData
+
+        # Force a garbage collection
+        collected = gc.collect()
+        if verbose:
+            print(f"meshinfo: Garbage collector: collected {collected} objects.")
+
+        print("Data ranges without Air:", flush=True)
+        selected_blocks = [block]
+
+        vol, statsdict = part(
+            calculator1,
+            "insert",
+            fieldunits,
+            ignored_keys,
+            ureg,
+            basedir,
+            ComputeHisto,
+            BinCount,
+        )
+        stats.append(statsdict)
+
+        icsv = part_integrate(
+            input, "insert", selected_blocks, basedir, merge=True, verbose=verbose
+        )
+        if verbose:
+            print(f'insert: vol={vol}, ivol={icsv["AxiVol"].to_list()[0] * 2 * pi}')
+        for key, value in statsdict.items():
+            for array, avalue in value["Arrays"].items():
+                if "Stats" in avalue:
+                    keyinfo = array.split(".")
+                    # print(f"keyinfo={keyinfo}", flush=True)
+                    if len(keyinfo) == 1:
+                        fieldname = array
+                    elif len(keyinfo) == 2:
+                        (physic, fieldname) = keyinfo
+                    elif len(keyinfo) == 3:
+                        (toolbox, physic, fieldname) = keyinfo
+                    else:
+                        raise RuntimeError(
+                            f"{key}: cannot get keyinfo as splitted char"
+                        )
+
+                    symbol = fieldunits[fieldname]["Symbol"]
+                    msymbol = symbol
+                    if "mSymbol" in fieldunits[fieldname]:
+                        msymbol = fieldunits[fieldname]["mSymbol"]
+                    units = {fieldname: fieldunits[fieldname]["Units"]}
+                    [in_unit, out_unit] = fieldunits[fieldname]["Units"]
+
+                    M = [0] * 5
+                    M[1] = icsv[f"{array}_moment1"].to_list()[0]
+                    M[2] = icsv[f"{array}_moment2"].to_list()[0]
+                    M[3] = icsv[f"{array}_moment3"].to_list()[0]
+                    M[4] = icsv[f"{array}_moment4"].to_list()[0]
+                    avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
+
+                    avalue["Stats"]["Standard Deviation"] = convert_data(
+                        units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                    )
+
+                    for order in range(2, 5):
+                        units = {f"M{order}": fieldunits[fieldname]["Units"]}
+                        if in_unit != ureg.kelvin:
+                            units[f"M{order}"] = [in_unit * order, out_unit * order]
+                        else:
+                            units[f"M{order}"] = [in_unit * order, in_unit * order]
+
+                        avalue["Stats"][f"M{order}"] = convert_data(
+                            units, M[order], f"M{order}"
+                        )
+
+                    # print(f"{array}: {avalue['Stats']}")
+
+        stats.append(statsdict)
+
+        # aggregate stats data
+        if ComputeStats:
+            createStatsTable([statsdict], "insert", fieldunits, basedir, verbose)
 
     return input, blockdata, stats
