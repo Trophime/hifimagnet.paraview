@@ -42,6 +42,7 @@
     "U": "ElectricPotential",
     "V": "ElectricPotential",
     "electric-potential": "ElectricPotential",
+    "electric_potential": "ElectricPotential",
     "atheta": "MagneticPotential",
     "Atheta": "MagneticPotential",
     "A": "MagneticPotential",
