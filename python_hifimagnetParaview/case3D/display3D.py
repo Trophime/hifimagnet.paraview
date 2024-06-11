@@ -42,6 +42,7 @@ def displayField(
     polargrid: bool = False,
     printed: bool = True,
     excludeBlocks: bool = False,
+    background: bool = False,
 ):
     """
     display field in renderview
@@ -80,13 +81,14 @@ def displayField(
     display.ColorArrayName = color
     if grid:
         display.DataAxesGrid.GridAxesVisibility = 1
-        display.DataAxesGrid.GridColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.XTitleColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.YTitleColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.ZTitleColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.XLabelColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.YLabelColor = [0.0, 0.0, 0.0]
-        display.DataAxesGrid.ZLabelColor = [0.0, 0.0, 0.0]
+        if background:
+            display.DataAxesGrid.GridColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.XTitleColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.YTitleColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.ZTitleColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.XLabelColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.YLabelColor = [0.0, 0.0, 0.0]
+            display.DataAxesGrid.ZLabelColor = [0.0, 0.0, 0.0]
         # display.DataAxesGrid.XTitleFontSize = 20
         # display.DataAxesGrid.YTitleFontSize = 20
         # display.DataAxesGrid.ZTitleFontSize = 20
@@ -96,15 +98,16 @@ def displayField(
     if polargrid:
         display.PolarAxes.Visibility = 1
         display.PolarAxes.MaximumAngle = 360.0
-        display.PolarAxes.PolarAxisColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.PolarArcsColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.LastRadialAxisColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.SecondaryPolarArcsColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.SecondaryRadialAxesColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.PolarAxisTitleColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.PolarAxisLabelColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.LastRadialAxisTextColor = [0.0, 0.0, 0.0]
-        display.PolarAxes.SecondaryRadialAxesTextColor = [0.0, 0.0, 0.0]
+        if background:
+            display.PolarAxes.PolarAxisColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarArcsColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.LastRadialAxisColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryPolarArcsColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryRadialAxesColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarAxisTitleColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarAxisLabelColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.LastRadialAxisTextColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryRadialAxesTextColor = [0.0, 0.0, 0.0]
         display.PolarAxes.Use2DMode = 0
         # display.PolarAxes.PolarAxisTitleFontSize = 20
         # display.PolarAxes.PolarAxisLabelFontSize = 20
@@ -200,14 +203,15 @@ def displayField(
     # LUTColorBar.ComponentTitle = ''
 
     # Properties modified on LUTColorBar
-    LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
+    if background:
+        LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
+        LUTColorBar.LabelColor = [0.0, 0.0, 0.0]
     # LUTColorBar.TitleFontFamily = 'Courier'
     LUTColorBar.TitleBold = 1
     LUTColorBar.TitleItalic = 1
     # LUTColorBar.TitleShadow = 1
     LUTColorBar.TitleFontSize = 30
     LUTColorBar.HorizontalTitle = 1
-    LUTColorBar.LabelColor = [0.0, 0.0, 0.0]
     # LUTColorBar.LabelFontFamily = 'Courier'
     LUTColorBar.LabelBold = 1
     # LUTColorBar.LabelItalic = 1
@@ -237,7 +241,7 @@ def displayField(
             filename,
             renderView,
             ImageResolution=resolution,
-            TransparentBackground=1,
+            TransparentBackground=background,
         )
 
     if comment is not None:
@@ -258,6 +262,7 @@ def make3Dview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
     """
     create a 3D view
@@ -310,6 +315,7 @@ def make3Dview(
         roll=90,
         elevation=300,
         excludeBlocks=excludeBlocks,
+        background=background,
     )
 
     Delete(renderView)
@@ -331,6 +337,7 @@ def makeOxOyview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
     """
     create an OxOy slice at z
@@ -379,6 +386,7 @@ def makeOxOyview(
         roll=0,
         polargrid=True,
         comment=rf"z={z_mm} {mm}",
+        background=background,
     )
 
     """
@@ -408,6 +416,7 @@ def makeOrOzview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
     """
     create an OxOy slice at z
@@ -463,6 +472,7 @@ def makeOrOzview(
         roll=roll,
         grid=True,
         comment=rf"theta={theta} deg",
+        background=background,
     )
     # viewUp=(0, 1, 0),
     # viewAngle=30,
@@ -490,6 +500,7 @@ def makeview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
 
     print("Make 3D view with 1/4 cut out:")
@@ -502,6 +513,7 @@ def makeview(
         basedir,
         suffix=suffix,
         addruler=addruler,
+        background=background,
     )
     if args.z:
         for z in args.z:
@@ -515,6 +527,7 @@ def makeview(
                 basedir,
                 suffix=suffix,
                 addruler=addruler,
+                background=background,
             )
 
     if args.theta:
@@ -530,4 +543,5 @@ def makeview(
                 basedir,
                 suffix=suffix,
                 addruler=addruler,
+                background=background,
             )

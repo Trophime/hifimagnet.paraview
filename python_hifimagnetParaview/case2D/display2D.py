@@ -32,6 +32,7 @@ def displayField(
     polargrid: bool = False,
     printed: bool = True,
     excludeBlocks: bool = False,
+    background: bool = False,
 ):
     """
     display field in renderview
@@ -80,7 +81,7 @@ def displayField(
                 print(f"ruler: {prop}={ruler.GetPropertyValue(prop)}", flush=True)
         Show(ruler, renderView)  # Reset Camera
 
-    resolution = [1400, 1200]
+    resolution = [1600, 1200]
     renderView.ViewSize = resolution
     if not printed:
         for prop in renderView.ListProperties():
@@ -143,14 +144,15 @@ def displayField(
     # LUTColorBar.ComponentTitle = ''
 
     # Properties modified on LUTColorBar
-    LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
+    if background:
+        LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
+        LUTColorBar.LabelColor = [0.0, 0.0, 0.0]
     # LUTColorBar.TitleFontFamily = 'Courier'
     LUTColorBar.TitleBold = 1
     LUTColorBar.TitleItalic = 1
     # LUTColorBar.TitleShadow = 1
     LUTColorBar.TitleFontSize = 30
     LUTColorBar.HorizontalTitle = 1
-    LUTColorBar.LabelColor = [0.0, 0.0, 0.0]
     # LUTColorBar.LabelFontFamily = 'Courier'
     # LUTColorBar.LabelBold = 1
     # LUTColorBar.LabelItalic = 1
@@ -180,7 +182,7 @@ def displayField(
             filename,
             renderView,
             ImageResolution=resolution,
-            TransparentBackground=1,
+            TransparentBackground=background,
         )
 
     if comment is not None:
@@ -201,6 +203,7 @@ def make2Dview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
     """
     create a 2D view
@@ -247,6 +250,7 @@ def make2Dview(
         addruler=addruler,
         filename=filename,
         excludeBlocks=excludeBlocks,
+        background=background,
     )
 
     Delete(renderView)
@@ -264,6 +268,7 @@ def makeview(
     suffix: str = None,
     addruler: bool = False,
     printed: bool = True,
+    background: bool = False,
 ):
     make2Dview(
         input,
@@ -274,4 +279,5 @@ def makeview(
         basedir,
         suffix=suffix,
         addruler=addruler,
+        background=background,
     )

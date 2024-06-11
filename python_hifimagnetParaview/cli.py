@@ -73,6 +73,11 @@ def options(description: str, epilog: str):
         allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
         )
+        allparsers.add_argument(
+            "--transparentBG",
+            help="transparent background for views",
+            action="store_true",
+        )
 
         allparsers.add_argument(
             "--cliptheta",
@@ -506,6 +511,7 @@ def main():
                         basedir,
                         suffix="",
                         addruler=False,
+                        background=args.transparentBG,
                     )
 
             if found:
@@ -529,6 +535,7 @@ def main():
                             basedir,
                             suffix=suffix,
                             addruler=False,
+                            background=args.transparentBG,
                         )
 
         else:
@@ -549,6 +556,7 @@ def main():
                     basedir,
                     suffix="",
                     addruler=False,
+                    background=args.transparentBG,
                 )
 
             if found and (
@@ -570,6 +578,7 @@ def main():
                     basedir,
                     suffix=suffix,
                     addruler=False,
+                    background=args.transparentBG,
                 )
 
     # for magnetfield:
