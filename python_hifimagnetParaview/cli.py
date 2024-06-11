@@ -1,5 +1,8 @@
 # import vtk
 import pandas as pd
+import matplotlib.pyplot as plt
+
+from typing import List
 
 from paraview.simple import (
     ExtractBlock,
@@ -90,7 +93,12 @@ def options(description: str, epilog: str):
             allparsers.add_argument(
                 "--z", nargs="*", type=float, help="select z in m to display"
             )
-
+        allparsers.add_argument(
+            "--deformedfactor",
+            type=int,
+            help="select factor for deformed views",
+            default=1,
+        )
         allparsers.add_argument(
             "--save",
             help="save graphs",
@@ -150,6 +158,24 @@ def init(file: str):
     # CellToData = False
 
     return cwd, basedir, ureg, distance_unit, reader
+
+
+def showplot(
+    figaxs: dict, legend: List[str], title: str, basedir: str, show: bool = True
+):
+    for f in figaxs:
+        print(f"plot {f}{title}", flush=True)
+        axs = figaxs[f]
+        axs[1].legend(legend, fontsize=18, loc="best")
+        axs[1].set_title(f"{f}{title} ", fontsize=20)
+        axs[1].grid(True, linestyle="--")
+        axs[1].tick_params(axis="x", which="major", labelsize=15)
+        axs[1].tick_params(axis="y", which="major", labelsize=15)
+        if show:
+            axs[0].show()
+        else:
+            axs[0].tight_layout()
+            axs[0].savefig(f"{basedir}/plots/{f}{title}.png", dpi=300)
 
 
 def main():
@@ -231,12 +257,15 @@ def main():
 
     # Plots
     if args.plots:
+        os.makedirs(f"{basedir}/plots", exist_ok=True)
         if axis:
             if args.r and args.z:
                 print(f"plots: r={args.r}, z={args.z}", flush=True)
                 if len(args.r) == 2:
+                    figaxs = {}  # create dict for fig and ax
                     for z in args.z:
-                        plotOr(
+                        # add plot for each z to dict
+                        figaxs = plotOr(
                             reader,
                             args.r,
                             None,
@@ -244,12 +273,18 @@ def main():
                             fieldunits,
                             ignored_keys,
                             basedir,
-                            show=(not args.save),
                             marker=args.plotsMarker,
+                            axs=figaxs,
                         )  # with r=[r1, r2], z: float
+
+                    legend = [f"z={z} m" for z in args.z]
+                    # plot every field with all z
+                    showplot(figaxs, legend, "-vs-r", basedir, show=(not args.save))
+                    plt.close()
                 if len(args.z) == 2:
+                    figaxs = {}
                     for r in args.r:
-                        plotOz(
+                        figaxs = plotOz(
                             reader,
                             r,
                             None,
@@ -257,26 +292,41 @@ def main():
                             fieldunits,
                             ignored_keys,
                             basedir,
-                            show=(not args.save),
                             marker=args.plotsMarker,
+                            axs=figaxs,
                         )  # with r: float, z=[z1,z2]
+                    legend = [f"r={r} m" for r in args.r]
+                    showplot(figaxs, legend, "-vs-z", basedir, show=(not args.save))
+                    plt.close()
         elif dim == 3:
             if args.r and args.z:
                 for r in args.r:
+                    figaxs = {}
                     for z in args.z:
-                        plotTheta(
+                        figaxs = plotTheta(
                             cellsize,
                             r,
                             z,
                             fieldunits,
                             ignored_keys,
                             basedir,
-                            show=(not args.save),
                             marker=args.plotsMarker,
+                            axs=figaxs,
                         )
+                    legend = [f"z={z} m" for z in args.z]
+                    showplot(
+                        figaxs,
+                        legend,
+                        f"-vs-theta-r={r}m",
+                        basedir,
+                        show=(not args.save),
+                    )
+                    plt.close()
+
                     if args.theta and len(args.z) == 2:
+                        figaxs = {}
                         for theta in args.theta:
-                            plotOz(
+                            figaxs = plotOz(
                                 reader,
                                 r,
                                 theta,
@@ -284,13 +334,23 @@ def main():
                                 fieldunits,
                                 ignored_keys,
                                 basedir,
-                                show=(not args.save),
                                 marker=args.plotsMarker,
+                                axs=figaxs,
                             )  # with r: float, z=[z1,z2]
+                        legend = [f"theta={theta} deg" for theta in args.theta]
+                        showplot(
+                            figaxs,
+                            legend,
+                            f"-vs-z-r={r}m",
+                            basedir,
+                            show=(not args.save),
+                        )
+                        plt.close()
                 if args.theta and len(args.r) == 2:
                     for theta in args.theta:
+                        figaxs = {}
                         for z in args.z:
-                            plotOr(
+                            figaxs = plotOr(
                                 reader,
                                 args.r,
                                 theta,
@@ -298,26 +358,41 @@ def main():
                                 fieldunits,
                                 ignored_keys,
                                 basedir,
-                                show=(not args.save),
                                 marker=args.plotsMarker,
+                                axs=figaxs,
                             )  # with r=[r1, r2], z: float
+                        legend = [f"z={z} m" for z in args.z]
+                        showplot(
+                            figaxs,
+                            legend,
+                            f"-vs-r-theta={theta}deg",
+                            basedir,
+                            show=(not args.save),
+                        )
+                        plt.close()
         elif dim == 2:
             if args.r:
                 if len(args.r) != 2 or not args.theta:
+                    figaxs = {}
                     for r in args.r:
-                        plotTheta(
+                        figaxs = plotTheta(
                             cellsize,
                             r,
                             None,
                             fieldunits,
                             ignored_keys,
                             basedir,
-                            show=(not args.save),
                             marker=args.plotsMarker,
+                            axs=figaxs,
                         )
+                    legend = [f"r={r} m" for r in args.r]
+                    showplot(figaxs, legend, "-vs-theta", basedir, show=(not args.save))
+                    plt.close()
+
                 if args.theta and len(args.r) == 2:
+                    figaxs = {}
                     for theta in args.theta:
-                        plotOr(
+                        figaxs = plotOr(
                             cellsize,
                             args.r,
                             theta,
@@ -325,9 +400,18 @@ def main():
                             fieldunits,
                             ignored_keys,
                             basedir,
-                            show=(not args.save),
                             marker=args.plotsMarker,
+                            axs=figaxs,
                         )  # with r=[r1, r2]
+                    legend = [f"theta={theta}deg" for theta in args.theta]
+                    showplot(
+                        figaxs,
+                        legend,
+                        f"-vs-r",
+                        basedir,
+                        show=(not args.save),
+                    )
+                    plt.close()
 
     # When dealing with elasticity
     suffix = ""
@@ -343,6 +427,7 @@ def main():
     if found and (dim == 3 or axis):
         # make3Dview(cellsize, blockdata, key, color, addruler=True)
         if args.channels:
+            os.makedirs(f"{basedir}/stl", exist_ok=True)
             print("Save stl for original geometries:", flush=True)
             for i, block in enumerate(blockdata.keys()):
                 name = blockdata[block]["name"]
@@ -357,18 +442,19 @@ def main():
                         registrationName="ExtractSurface1", Input=extractBlock1
                     )
 
-                    print(f" file={basedir}/{actual_name}.stl", flush=True)
-                    SaveData(f"{basedir}/{actual_name}.stl", proxy=extractSurface1)
+                    print(f" file={basedir}/stl/{actual_name}.stl", flush=True)
+                    SaveData(f"{basedir}/stl/{actual_name}.stl", proxy=extractSurface1)
                     Delete(extractBlock1)
                     del extractBlock1
                 else:
                     print(" ignored", flush=True)
 
-        geometry = deformed(cellsize, factor=1)
+        geometry = deformed(cellsize, factor=args.deformedfactor)
 
         # compute channel deformation
         # use MeshLib see test-meshlib example
         if args.channels:
+            geometryfactor1 = deformed(cellsize, factor=1)
             print("Save stl for deformed geometries:", flush=True)
             for i, block in enumerate(blockdata.keys()):
                 name = blockdata[block]["name"]
@@ -376,7 +462,9 @@ def main():
                 print(f"\t{name}: actual_name={actual_name}", end="")
                 if not actual_name.endswith("Isolant") and not "Air" in actual_name:
                     print(" saved", flush=True)
-                    extractBlock1 = ExtractBlock(registrationName=name, Input=geometry)
+                    extractBlock1 = ExtractBlock(
+                        registrationName=name, Input=geometryfactor1
+                    )
                     extractBlock1.Selectors = [block]
                     extractBlock1.UpdatePipeline()
                     extractSurface1 = ExtractSurface(
@@ -384,19 +472,20 @@ def main():
                     )
 
                     SaveData(
-                        f"{basedir}/{actual_name}-deformed.stl", proxy=extractSurface1
+                        f"{basedir}/stl/{actual_name}-deformed.stl",
+                        proxy=extractSurface1,
                     )
                     Delete(extractBlock1)
                     del extractBlock1
                 else:
                     print(" ignored", flush=True)
 
-        suffix = "-deformed"
+        suffix = f"-deformed_factor{args.deformedfactor}"
         cellsize_deformed = geometry
     elif found and dim == 2 and not axis:
-        cellsize_deformed = deformed(cellsize, factor=1)
+        cellsize_deformed = deformed(cellsize, factor=args.deformedfactor)
 
-        suffix = "-deformed"
+        suffix = f"-deformed_factor{args.deformedfactor}"
         # cellsize = geometry
 
     # Views

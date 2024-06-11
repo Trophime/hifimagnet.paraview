@@ -29,12 +29,10 @@ def plotOr(
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
-    show: bool = True,
     printed: bool = True,
     marker: str = None,
-):
-    os.makedirs(f"{basedir}/plots", exist_ok=True)
-
+    axs: dict = None,  # dict of fig,ax for each field
+) -> dict:
     [r0, r1] = r
     radian = theta * pi / 180.0
 
@@ -72,7 +70,6 @@ def plotOr(
         fieldunits: dict,
         basedir: str,
         ax=None,
-        show: bool = True,
         marker: str = None,
     ):
 
@@ -115,23 +112,14 @@ def plotOr(
         keycsv[key] = ndf[key]
         keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
 
-        plt.xlabel("r [m]")
-        plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
+        ax.set_xlabel("r [m]", fontsize=18)
+        ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
         r_units = {"coord": fieldunits["coord"]["Units"]}
         mm = f'{fieldunits["coord"]["Units"][1]:~P}'
         z_mm = convert_data(r_units, z, "coord")
-        plt.title(f"{key}: theta={theta} deg, z={z_mm} {mm}")
 
-        if show:
-            plt.show()
-        else:
-            plt.tight_layout()
-            plt.savefig(
-                f"{basedir}/plots/{key}-vs-r-theta={theta}-z={z_mm}{mm}.png", dpi=300
-            )
-        plt.close()
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}-z={z_mm}{mm}.csv")
         pass
 
@@ -147,6 +135,9 @@ def plotOr(
                 for i in range(Components):
                     print(f"plotOrField for {field}:{i} skipped", flush=True)
             else:
+                if field not in axs:  # if field not in dict -> create fig, ax
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    axs[field] = (fig, ax)
                 plotOrField(
                     filename,
                     field,
@@ -154,8 +145,7 @@ def plotOr(
                     z,
                     fieldunits,
                     basedir,
-                    ax=None,
-                    show=show,
+                    ax=axs[field][1],
                     marker=marker,
                 )
 
@@ -167,7 +157,7 @@ def plotOr(
 
     Delete(cellDatatoPointData1)
     del cellDatatoPointData1
-    pass
+    return axs
 
 
 def plotOz(
@@ -178,11 +168,10 @@ def plotOz(
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
-    show: bool = True,
     printed: bool = True,
     marker: str = None,
-):
-    os.makedirs(f"{basedir}/plots", exist_ok=True)
+    axs: dict = None,  # dict of fig,ax for each field
+) -> dict:
 
     [z0, z1] = z
     radian = theta * pi / 180.0
@@ -214,7 +203,6 @@ def plotOz(
         fieldunits: dict,
         basedir: str,
         ax=None,
-        show: bool = True,
         marker: str = None,
     ):
 
@@ -254,23 +242,14 @@ def plotOz(
         keycsv[key] = ndf[key]
         keycsv.plot(x="z", y=key, marker=marker, grid=True, ax=ax)
 
-        plt.xlabel("z [m]")
-        plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
+        ax.set_xlabel("z [m]", fontsize=18)
+        ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
         r_units = {"coord": fieldunits["coord"]["Units"]}
         mm = f'{fieldunits["coord"]["Units"][1]:~P}'
         r_mm = convert_data(r_units, r, "coord")
-        plt.title(f"{key}: theta={theta} deg, r={r_mm} {mm}")
 
-        if show:
-            plt.show()
-        else:
-            plt.tight_layout()
-            plt.savefig(
-                f"{basedir}/plots/{key}-vs-z-theta={theta}-r={r_mm}{mm}.png", dpi=300
-            )
-        plt.close()
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-z-theta={theta}-r={r_mm}{mm}.csv")
         pass
 
@@ -286,6 +265,9 @@ def plotOz(
                 for i in range(Components):
                     print(f"plotOzField for {field}:{i} skipped", flush=True)
             else:
+                if field not in axs:  # if field not in dict -> create fig, ax
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    axs[field] = (fig, ax)
                 plotOzField(
                     filename,
                     field,
@@ -293,8 +275,7 @@ def plotOz(
                     theta,
                     fieldunits,
                     basedir,
-                    ax=None,
-                    show=show,
+                    ax=axs[field][1],
                     marker=marker,
                 )
 
@@ -306,7 +287,7 @@ def plotOz(
 
     Delete(cellDatatoPointData1)
     del cellDatatoPointData1
-    pass
+    return axs
 
 
 # @profile
@@ -317,15 +298,14 @@ def plotTheta(
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
-    show: bool = True,
     printed: bool = True,
     verbose: bool = False,
     marker: str = None,
-):
+    axs: dict = None,  # dict of fig,ax for each field
+) -> dict:
     """
     for theta, need to apply CellDataToPointData filter
     """
-    os.makedirs(f"{basedir}/plots", exist_ok=True)
 
     print(f"plotTheta: r={r}, z={z}", flush=True)
     cellDatatoPointData1 = CellDatatoPointData(
@@ -378,11 +358,10 @@ def plotTheta(
         fieldunits: dict,
         basedir: str,
         ax=None,
-        show: bool = True,
         marker: str = None,
     ):
 
-        print(f"plotThetaField: files={files}, key={key}, show={show}", flush=True)
+        print(f"plotThetaField: files={files}, key={key}", flush=True)
         keyinfo = key.split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
         if len(keyinfo) == 2:
@@ -446,25 +425,15 @@ def plotTheta(
         # print(f"df={df}", flush=True)
         df.plot(x="theta", y=key, marker=marker, grid=True, ax=ax)
 
-        plt.xlabel(r"$\theta$ [deg]")
-        plt.ylabel(rf"{msymbol} [{out_unit:~P}]")
+        ax.set_xlabel(r"$\theta$ [deg]", fontsize=18)
+        ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
 
         # x range
         x0 = -180
         x1 = 180
-        plt.xlim(x0, x1)
+        ax.set_xlim(x0, x1)
 
         ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: r={r_mm} {mm}, z={z_mm} {mm}")
-
-        if show:
-            plt.show()
-        else:
-            plt.tight_layout()
-            plt.savefig(
-                f"{basedir}/plots/{key}-vs-theta-r={r_mm}{mm}-z={z_mm}{mm}.png", dpi=300
-            )
-        plt.close()
 
         print(f"{key} stats on r={r_mm}{mm}-z={z_mm}{mm}", flush=True)
         print(f"{df[key].describe()}", flush=True)
@@ -481,8 +450,11 @@ def plotTheta(
                 for i in range(Components):
                     print(f"plotThetaField for {field}:{i} skipped", flush=True)
                 # for i in range(Components):
-                #     plotThetaField(files, f"{field}:{i}", r, z, ax=None, show=show)
+                #     plotThetaField(files, f"{field}:{i}", r, z, ax=None)
             else:
+                if field not in axs:  # if field not in dict -> create fig, ax
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    axs[field] = (fig, ax)
                 plotThetaField(
                     files,
                     field,
@@ -490,8 +462,7 @@ def plotTheta(
                     z,
                     fieldunits,
                     basedir,
-                    ax=None,
-                    show=show,
+                    ax=axs[field][1],
                     marker=marker,
                 )
 
@@ -506,3 +477,5 @@ def plotTheta(
     collected = gc.collect()
     if verbose:
         print(f"Garbage collector: collected {collected} objects.", flush=True)
+
+    return axs

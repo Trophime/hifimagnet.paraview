@@ -17,11 +17,10 @@ def plotOr(
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
-    show: bool = True,
     printed: bool = True,
     marker: str = None,
-):
-    os.makedirs(f"{basedir}/plots", exist_ok=True)
+    axs: dict = None,  # dict of fig,ax for each field
+) -> dict:
 
     [r0, r1] = r
 
@@ -56,9 +55,7 @@ def plotOr(
         key: str,
         z: float,
         fieldunits: dict,
-        basedir: str,
         ax=None,
-        show: bool = True,
         marker: str = None,
     ):
 
@@ -98,18 +95,10 @@ def plotOr(
         keycsv[key] = ndf[key]
         keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
 
-        plt.xlabel("r [m]")
-        plt.ylabel(rf"{symbol} [{out_unit:~P}]")
+        ax.set_xlabel("r [m]", fontsize=18)
+        ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: z={z} ")
-
-        if show:
-            plt.show()
-        else:
-            plt.tight_layout()
-            plt.savefig(f"{basedir}/plots/{key}-vs-r-z={z}.png", dpi=300)
-        plt.close()
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -123,14 +112,15 @@ def plotOr(
                 for i in range(Components):
                     print(f"plotOrField for {field}:{i} skipped", flush=True)
             else:
+                if field not in axs:  # if field not in dict -> create fig, ax
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    axs[field] = (fig, ax)
                 plotOrField(
                     filename,
                     field,
                     z,
                     fieldunits,
-                    basedir,
-                    ax=None,
-                    show=show,
+                    ax=axs[field][1],
                     marker=marker,
                 )
 
@@ -141,7 +131,7 @@ def plotOr(
 
     Delete(cellDatatoPointData1)
     del cellDatatoPointData1
-    pass
+    return axs
 
 
 def plotOz(
@@ -152,11 +142,10 @@ def plotOz(
     fieldunits: dict,
     ignored_keys: List[str],
     basedir: str,
-    show: bool = True,
     printed: bool = True,
     marker: str = None,
-):
-    os.makedirs(f"{basedir}/plots", exist_ok=True)
+    axs: dict = None,  # dict of fig,ax for each field
+) -> dict:
 
     [z0, z1] = z
 
@@ -184,9 +173,7 @@ def plotOz(
         key: str,
         z: float,
         fieldunits: dict,
-        basedir: str,
         ax=None,
-        show: bool = True,
         marker: str = None,
     ):
 
@@ -223,18 +210,10 @@ def plotOz(
         keycsv[key] = ndf[key]
         keycsv.plot(x="z", y=key, marker=marker, grid=True, ax=ax)
 
-        plt.xlabel("z [m]")
-        plt.ylabel(rf"{symbol} [{out_unit:~P}]")
+        ax.set_xlabel("z [m]", fontsize=18)
+        ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
-        plt.title(f"{key}: r={r} ")
-
-        if show:
-            plt.show()
-        else:
-            plt.tight_layout()
-            plt.savefig(f"{basedir}/plots/{key}-vs-z-r={r}.png", dpi=300)
-        plt.close()
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -248,14 +227,15 @@ def plotOz(
                 for i in range(Components):
                     print(f"plotOzField for {field}:{i} skipped", flush=True)
             else:
+                if field not in axs:  # if field not in dict -> create fig, ax
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    axs[field] = (fig, ax)
                 plotOzField(
                     filename,
                     field,
                     r,
                     fieldunits,
-                    basedir,
-                    ax=None,
-                    show=show,
+                    ax=axs[field][1],
                     marker=marker,
                 )
-    pass
+    return axs
