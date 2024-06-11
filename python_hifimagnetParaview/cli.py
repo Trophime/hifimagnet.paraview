@@ -31,6 +31,7 @@ import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     Quantity([])
+warnings.filterwarnings("ignore")
 
 
 def options(description: str, epilog: str):
@@ -93,6 +94,11 @@ def options(description: str, epilog: str):
             allparsers.add_argument(
                 "--z", nargs="*", type=float, help="select z in m to display"
             )
+        allparsers.add_argument(
+            "--greyspace",
+            help="plot grey bar for holes in plot",
+            action="store_true",
+        )
         allparsers.add_argument(
             "--deformedfactor",
             type=int,
@@ -160,13 +166,11 @@ def init(file: str):
     return cwd, basedir, ureg, distance_unit, reader
 
 
-def showplot(
-    figaxs: dict, legend: List[str], title: str, basedir: str, show: bool = True
-):
+def showplot(figaxs: dict, title: str, basedir: str, show: bool = True):
     for f in figaxs:
         print(f"plot {f}{title}", flush=True)
         axs = figaxs[f]
-        axs[1].legend(legend, fontsize=18, loc="best")
+        axs[1].legend(axs[2], fontsize=18, loc="best")
         axs[1].set_title(f"{f}{title} ", fontsize=20)
         axs[1].grid(True, linestyle="--")
         axs[1].tick_params(axis="x", which="major", labelsize=15)
@@ -275,11 +279,10 @@ def main():
                             basedir,
                             marker=args.plotsMarker,
                             axs=figaxs,
+                            greyspace=args.greyspace,
                         )  # with r=[r1, r2], z: float
-
-                    legend = [f"z={z} m" for z in args.z]
                     # plot every field with all z
-                    showplot(figaxs, legend, "-vs-r", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-r", basedir, show=(not args.save))
                     plt.close()
                 if len(args.z) == 2:
                     figaxs = {}
@@ -295,8 +298,7 @@ def main():
                             marker=args.plotsMarker,
                             axs=figaxs,
                         )  # with r: float, z=[z1,z2]
-                    legend = [f"r={r} m" for r in args.r]
-                    showplot(figaxs, legend, "-vs-z", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-z", basedir, show=(not args.save))
                     plt.close()
         elif dim == 3:
             if args.r and args.z:
@@ -313,10 +315,8 @@ def main():
                             marker=args.plotsMarker,
                             axs=figaxs,
                         )
-                    legend = [f"z={z} m" for z in args.z]
                     showplot(
                         figaxs,
-                        legend,
                         f"-vs-theta-r={r}m",
                         basedir,
                         show=(not args.save),
@@ -337,10 +337,8 @@ def main():
                                 marker=args.plotsMarker,
                                 axs=figaxs,
                             )  # with r: float, z=[z1,z2]
-                        legend = [f"theta={theta} deg" for theta in args.theta]
                         showplot(
                             figaxs,
-                            legend,
                             f"-vs-z-r={r}m",
                             basedir,
                             show=(not args.save),
@@ -360,11 +358,10 @@ def main():
                                 basedir,
                                 marker=args.plotsMarker,
                                 axs=figaxs,
+                                greyspace=args.greyspace,
                             )  # with r=[r1, r2], z: float
-                        legend = [f"z={z} m" for z in args.z]
                         showplot(
                             figaxs,
-                            legend,
                             f"-vs-r-theta={theta}deg",
                             basedir,
                             show=(not args.save),
@@ -385,8 +382,7 @@ def main():
                             marker=args.plotsMarker,
                             axs=figaxs,
                         )
-                    legend = [f"r={r} m" for r in args.r]
-                    showplot(figaxs, legend, "-vs-theta", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-theta", basedir, show=(not args.save))
                     plt.close()
 
                 if args.theta and len(args.r) == 2:
@@ -402,11 +398,10 @@ def main():
                             basedir,
                             marker=args.plotsMarker,
                             axs=figaxs,
+                            greyspace=args.greyspace,
                         )  # with r=[r1, r2]
-                    legend = [f"theta={theta}deg" for theta in args.theta]
                     showplot(
                         figaxs,
-                        legend,
                         f"-vs-r",
                         basedir,
                         show=(not args.save),

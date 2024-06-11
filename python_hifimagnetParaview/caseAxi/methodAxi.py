@@ -282,6 +282,13 @@ def addFieldToFieldunits(
 def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: str):
     # use r"$\theta$" for displaying units in mathplotlib
     fieldunits = {
+        "coord": {
+            "Symbol": "r",
+            "Units": [
+                ureg.meter,
+                ureg.Unit(distance_unit),
+            ],
+        },
         "Length": {"Symbol": "", "Units": [ureg.meter, ureg.Unit(distance_unit)]},
         "Area": {
             "Symbol": "S",

@@ -1,6 +1,7 @@
 import gc
 import os
 import re
+import pandas as pd
 from typing import List
 
 from paraview.simple import (
@@ -258,3 +259,29 @@ def integrateKeys(
         )
 
     return filename
+
+
+def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend):
+    nan_positions = df[cy].isnull()
+
+    # Fill areas before and after NaN values
+    x1 = None
+    x2 = None
+    for i in range(len(nan_positions)):
+        if nan_positions[i] and i > 0 and not x1:
+            x1 = i - 1
+        elif not nan_positions[i] and i > 0:
+            if nan_positions[i - 1]:
+                x2 = i
+
+        if x1 and x2:
+            ax.axvspan(
+                df[cx][x1],
+                df[cx][x2],
+                alpha=0.3,
+                color="grey",
+            )
+            x1 = None
+            x2 = None
+            legend.append("_nolegend_")
+    return legend

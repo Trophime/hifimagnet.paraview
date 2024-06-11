@@ -17,7 +17,7 @@ from paraview.simple import (
     SetActiveSource,
 )
 
-from ..method import convert_data, resultinfo
+from ..method import convert_data, resultinfo, plot_greySpace
 from ..view import makeclip, makecylinderslice
 
 
@@ -32,6 +32,7 @@ def plotOr(
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
+    greyspace: bool = False,
 ) -> dict:
     [r0, r1] = r
     radian = theta * pi / 180.0
@@ -69,10 +70,11 @@ def plotOr(
         z: float,
         fieldunits: dict,
         basedir: str,
-        ax=None,
+        axs=None,
         marker: str = None,
+        greyspace: bool = False,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
@@ -121,9 +123,12 @@ def plotOr(
         r_units = {"coord": fieldunits["coord"]["Units"]}
         mm = f'{fieldunits["coord"]["Units"][1]:~P}'
         z_mm = convert_data(r_units, z, "coord")
+        legend.append(f"z={z_mm:.0f}{mm}")
+        if greyspace:
+            legend = plot_greySpace(keycsv, "r", key, ax, legend)
 
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}-z={z_mm}{mm}.csv")
-        pass
+        return legend
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -137,18 +142,19 @@ def plotOr(
                 for i in range(Components):
                     print(f"plotOrField for {field}:{i} skipped", flush=True)
             else:
-                if field not in axs:  # if field not in dict -> create fig, ax
+                if field not in axs:  # if field not in dict -> create fig, ax, legend
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotOrField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotOrField(
                     filename,
                     field,
                     theta,
                     z,
                     fieldunits,
                     basedir,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
+                    greyspace=greyspace,
                 )
 
     # remove temporary csv files
@@ -201,13 +207,13 @@ def plotOz(
         file,
         key: str,
         theta: float,
-        z: float,
+        z: List[float],
         fieldunits: dict,
         basedir: str,
-        ax=None,
+        axs=None,
         marker: str = None,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
@@ -245,6 +251,7 @@ def plotOz(
 
         keycsv[key] = ndf[key]
         keycsv.plot(x="z", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"theta={theta}deg")
 
         ax.set_xlabel("z [m]", fontsize=18)
         ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
@@ -255,7 +262,7 @@ def plotOz(
         r_mm = convert_data(r_units, r, "coord")
 
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-z-theta={theta}-r={r_mm}{mm}.csv")
-        pass
+        return legend
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -271,15 +278,15 @@ def plotOz(
             else:
                 if field not in axs:  # if field not in dict -> create fig, ax
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotOzField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotOzField(
                     filename,
                     field,
-                    r,
                     theta,
+                    z,
                     fieldunits,
                     basedir,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
                 )
 
@@ -361,10 +368,10 @@ def plotTheta(
         z: float,
         fieldunits: dict,
         basedir: str,
-        ax=None,
+        axs=None,
         marker: str = None,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotThetaField: files={files}, key={key}", flush=True)
         keyinfo = key.split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
@@ -430,6 +437,7 @@ def plotTheta(
         # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
         # print(f"df={df}", flush=True)
         df.plot(x="theta", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"z={z_mm:.0f}{mm}")
 
         ax.set_xlabel(r"$\theta$ [deg]", fontsize=18)
         ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
@@ -443,7 +451,7 @@ def plotTheta(
 
         print(f"{key} stats on r={r_mm}{mm}-z={z_mm}{mm}", flush=True)
         print(f"{df[key].describe()}", flush=True)
-        pass
+        return legend
 
     # requirements: create PointData from CellData
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
@@ -460,15 +468,15 @@ def plotTheta(
             else:
                 if field not in axs:  # if field not in dict -> create fig, ax
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotThetaField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotThetaField(
                     files,
                     field,
                     r,
                     z,
                     fieldunits,
                     basedir,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
                 )
 

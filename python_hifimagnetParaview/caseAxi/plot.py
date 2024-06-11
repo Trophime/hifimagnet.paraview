@@ -6,7 +6,7 @@ from typing import List
 
 from paraview.simple import CellDatatoPointData, PlotOverLine, CreateWriter, Delete
 
-from ..method import convert_data, resultinfo
+from ..method import convert_data, resultinfo, plot_greySpace
 
 
 def plotOr(
@@ -20,6 +20,7 @@ def plotOr(
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
+    greyspace: bool = False,
 ) -> dict:
 
     [r0, r1] = r
@@ -55,10 +56,11 @@ def plotOr(
         key: str,
         z: float,
         fieldunits: dict,
-        ax=None,
+        axs=None,
         marker: str = None,
+        greyspace: bool = False,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.replace("_Magnitude", "").split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
@@ -79,6 +81,10 @@ def plotOr(
         if ax is None:
             ax = plt.gca()
 
+        z_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        z_mm = convert_data(z_units, z, "coord")
+
         # see vonmises-vs-theta.py and/or vonmises-vs-theta-plot-savedata.py
         csv = pd.read_csv(file)
         keycsv = csv[["arc_length", key]]
@@ -96,11 +102,15 @@ def plotOr(
 
         keycsv[key] = ndf[key]
         keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"z={z_mm:.0f}{mm}")
+        if greyspace:
+            legend = plot_greySpace(keycsv, "r", key, ax, legend)
 
         ax.set_xlabel("r [m]", fontsize=18)
         ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
+        return legend
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -116,14 +126,15 @@ def plotOr(
             else:
                 if field not in axs:  # if field not in dict -> create fig, ax
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotOrField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotOrField(
                     filename,
                     field,
                     z,
                     fieldunits,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
+                    greyspace=greyspace,
                 )
 
     os.remove(filename)
@@ -173,12 +184,12 @@ def plotOz(
     def plotOzField(
         file,
         key: str,
-        z: float,
+        r: float,
         fieldunits: dict,
-        ax=None,
+        axs=None,
         marker: str = None,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.replace("_Magnitude", "").split(".")
         # print(f"keyinfo={keyinfo}", flush=True)
@@ -195,6 +206,10 @@ def plotOz(
 
         if ax is None:
             ax = plt.gca()
+
+        r_units = {"coord": fieldunits["coord"]["Units"]}
+        mm = f'{fieldunits["coord"]["Units"][1]:~P}'
+        r_mm = convert_data(r_units, r, "coord")
 
         # see vonmises-vs-theta.py and/or vonmises-vs-theta-plot-savedata.py
         csv = pd.read_csv(file)
@@ -213,11 +228,13 @@ def plotOz(
 
         keycsv[key] = ndf[key]
         keycsv.plot(x="z", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"r={r_mm:.0f}{mm}")
 
         ax.set_xlabel("z [m]", fontsize=18)
         ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
+        return legend
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -231,15 +248,15 @@ def plotOz(
                 for i in range(Components):
                     print(f"plotOzField for {field}:{i} skipped", flush=True)
             else:
-                if field not in axs:  # if field not in dict -> create fig, ax
+                if field not in axs:  # if field not in dict -> create fig, ax,legend
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotOzField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotOzField(
                     filename,
                     field,
                     r,
                     fieldunits,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
                 )
     return axs

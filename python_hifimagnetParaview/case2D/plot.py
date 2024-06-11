@@ -17,7 +17,7 @@ from paraview.simple import (
     SetActiveSource,
 )
 
-from ..method import convert_data, resultinfo
+from ..method import convert_data, resultinfo, plot_greySpace
 from ..view import makeclip, makecylinderslice
 
 
@@ -32,6 +32,7 @@ def plotOr(
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig ax for each field
+    greyspace: bool = False,
 ) -> dict:
 
     [r0, r1] = r
@@ -62,10 +63,11 @@ def plotOr(
         theta: float,
         fieldunits: dict,
         basedir: str,
-        ax=None,
+        axs=None,
         marker: str = None,
+        greyspace: bool = False,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
         keyinfo = key.split(".")
         print(f"keyinfo={keyinfo}", flush=True)
@@ -106,6 +108,9 @@ def plotOr(
 
         keycsv[key] = ndf[key]
         keycsv.plot(x="r", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"theta={theta:.2f}deg")
+        if greyspace:
+            legend = plot_greySpace(keycsv, "r", key, ax, legend)
 
         ax.set_xlabel("r [m]", fontsize=18)
         ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
@@ -113,7 +118,7 @@ def plotOr(
         # ax.yaxis.set_major_locator(MaxNLocator(10))
 
         keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}deg.csv")
-        pass
+        return legend
 
     # requirements: create PointData from CellData
     # for field in input.PointData.keys():
@@ -127,17 +132,18 @@ def plotOr(
                 for i in range(Components):
                     print(f"plotOrField for {field}:{i} skipped", flush=True)
             else:
-                if field not in axs:  # if field not in dict -> create fig, ax
+                if field not in axs:  # if field not in dict -> create fig, ax,legend
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotOrField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotOrField(
                     filename,
                     field,
                     theta,
                     fieldunits,
                     basedir,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
+                    greyspace=greyspace,
                 )
 
     # remove temporary csv files
@@ -201,10 +207,10 @@ def plotTheta(
         r: float,
         fieldunits: dict,
         basedir: str,
-        ax=None,
+        axs=None,
         marker: str = None,
     ):
-
+        [fig, ax, legend] = axs
         print(f"plotThetaField: files={files}, key={key}", flush=True)
         keyinfo = key.split(".")
         print(f"keyinfo={keyinfo}", flush=True)
@@ -269,6 +275,7 @@ def plotTheta(
         # assert key in df.columns.values.tolist(), f"{key} not in df_keys"
         # print(f"df={df}", flush=True)
         df.plot(x="theta", y=key, marker=marker, grid=True, ax=ax)
+        legend.append(f"r={r_mm:.0f}{mm}")
 
         ax.set_xlabel(r"$\theta$ [deg]", fontsize=18)
         ax.set_ylabel(rf"{msymbol} [{out_unit:~P}]", fontsize=18)
@@ -282,7 +289,7 @@ def plotTheta(
 
         print(f"{key} stats on r={r_mm}{mm}", flush=True)
         print(f"{df[key].describe()}", flush=True)
-        pass
+        return legend
 
     # requirements: create PointData from CellData
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
@@ -299,14 +306,14 @@ def plotTheta(
             else:
                 if field not in axs:  # if field not in dict -> create fig, ax
                     fig, ax = plt.subplots(figsize=(12, 8))
-                    axs[field] = (fig, ax)
-                plotThetaField(
+                    axs[field] = [fig, ax, []]
+                axs[field][2] = plotThetaField(
                     files,
                     field,
                     r,
                     fieldunits,
                     basedir,
-                    ax=axs[field][1],
+                    axs=axs[field],
                     marker=marker,
                 )
 
