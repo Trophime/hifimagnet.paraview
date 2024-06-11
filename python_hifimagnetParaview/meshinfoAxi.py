@@ -568,4 +568,4 @@ def meshinfo(
         # aggregate stats data
         createStatsTable(stats, "total", fieldunits, basedir, verbose)
 
-    return input, blockdata, dict()
+    return input, blockdata, stats
