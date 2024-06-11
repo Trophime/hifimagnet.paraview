@@ -153,7 +153,13 @@ def createStatsTable(
                 values = df[column].to_list()
                 # print(f"{column}:", flush=True)
                 # print(f"values={values}", flush=True)
-                out_values = convert_data(units, values, fieldname)
+                if (
+                    column == "Standard Deviation"
+                    and units[fieldname][0] != ureg.kelvin
+                ):
+                    out_values = convert_data(units, values, fieldname)
+                else:
+                    out_values = values
                 # print(f"out_values={out_values}", flush=True)
                 # print(
                 #     f"format out_values={[f'{val:.2f}' for val in out_values]}",
