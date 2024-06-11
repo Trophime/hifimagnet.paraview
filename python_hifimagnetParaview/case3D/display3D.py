@@ -80,9 +80,36 @@ def displayField(
     display.ColorArrayName = color
     if grid:
         display.DataAxesGrid.GridAxesVisibility = 1
+        display.DataAxesGrid.GridColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.XTitleColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.YTitleColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.ZTitleColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.XLabelColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.YLabelColor = [0.0, 0.0, 0.0]
+        display.DataAxesGrid.ZLabelColor = [0.0, 0.0, 0.0]
+        # display.DataAxesGrid.XTitleFontSize = 20
+        # display.DataAxesGrid.YTitleFontSize = 20
+        # display.DataAxesGrid.ZTitleFontSize = 20
+        # display.DataAxesGrid.ZLabelFontSize = 20
+        # display.DataAxesGrid.XLabelFontSize = 20
+        # display.DataAxesGrid.YLabelFontSize = 20
     if polargrid:
         display.PolarAxes.Visibility = 1
         display.PolarAxes.MaximumAngle = 360.0
+        display.PolarAxes.PolarAxisColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.PolarArcsColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.LastRadialAxisColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.SecondaryPolarArcsColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.SecondaryRadialAxesColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.PolarAxisTitleColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.PolarAxisLabelColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.LastRadialAxisTextColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.SecondaryRadialAxesTextColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.Use2DMode = 0
+        # display.PolarAxes.PolarAxisTitleFontSize = 20
+        # display.PolarAxes.PolarAxisLabelFontSize = 20
+        # display.PolarAxes.LastRadialAxisTextFontSize = 20
+        # display.PolarAxes.SecondaryRadialAxesTextFontSize = 20
 
     # for vector: ColorBy(display, ('CELLS', 'magnetic_field', 'Z'))
     ColorBy(display, tuple(color))
@@ -328,7 +355,7 @@ def makeOxOyview(
 
     filename = f"{basedir}/views/{field}-OxOy-z={z_mm}{mm}.png"
     if suffix is not None:
-        filename = f"{basedir}/views/{field}-{suffix}-OxOy-z={z_mm}{mm}.png"
+        filename = f"{basedir}/views/{field}{suffix}-OxOy-z={z_mm}{mm}.png"
 
     # position is None
     renderView = displayField(
@@ -405,7 +432,7 @@ def makeOrOzview(
 
     filename = f"{basedir}/views/{field}-OrOz-theta={theta}deg.png"
     if suffix is not None:
-        filename = f"{basedir}/views/{field}-{suffix}-OrOz-theta={theta}deg.png"
+        filename = f"{basedir}/views/{field}{suffix}-OrOz-theta={theta}deg.png"
 
     print(f"theta={theta} deg, angle={angle} deg = {radian} rad", flush=True)
 
