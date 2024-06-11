@@ -1,0 +1,10 @@
+argcomplete==3.3.0
+gmsh==4.13.1
+imgdiff==1.7.1
+meshlib==2.4.2.30
+natsort==8.4.0
+numpy==1.26.4
+pint==0.23
+pytest==8.2.1
+pytest-image-diff==0.0.11
+tabulate==0.9.0
