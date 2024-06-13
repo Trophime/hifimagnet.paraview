@@ -17,7 +17,7 @@ from paraview.simple import (
     SetActiveSource,
 )
 
-from ..method import convert_data, resultinfo, plot_greySpace
+from ..method import convert_data, resultinfo, showplot, plot_greySpace
 from ..view import makeclip, makecylinderslice
 
 
@@ -493,3 +493,74 @@ def plotTheta(
         print(f"Garbage collector: collected {collected} objects.", flush=True)
 
     return axs
+
+
+def makeplot(
+    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+):
+    if args.r and args.z:
+        for r in args.r:
+            figaxs = {}
+            for z in args.z:
+                figaxs = plotTheta(
+                    cellsize,
+                    r,
+                    z,
+                    fieldunits,
+                    ignored_keys,
+                    basedir,
+                    marker=args.plotsMarker,
+                    axs=figaxs,
+                )
+            showplot(
+                figaxs,
+                f"-vs-theta-r={r}m",
+                basedir,
+                show=args.show,
+            )
+            plt.close()
+
+            if args.theta and len(args.z) == 2:
+                figaxs = {}
+                for theta in args.theta:
+                    figaxs = plotOz(
+                        reader,
+                        r,
+                        theta,
+                        args.z,
+                        fieldunits,
+                        ignored_keys,
+                        basedir,
+                        marker=args.plotsMarker,
+                        axs=figaxs,
+                    )  # with r: float, z=[z1,z2]
+                showplot(
+                    figaxs,
+                    f"-vs-z-r={r}m",
+                    basedir,
+                    show=args.show,
+                )
+                plt.close()
+        if args.theta and len(args.r) == 2:
+            for theta in args.theta:
+                figaxs = {}
+                for z in args.z:
+                    figaxs = plotOr(
+                        reader,
+                        args.r,
+                        theta,
+                        z,
+                        fieldunits,
+                        ignored_keys,
+                        basedir,
+                        marker=args.plotsMarker,
+                        axs=figaxs,
+                        greyspace=args.greyspace,
+                    )  # with r=[r1, r2], z: float
+                showplot(
+                    figaxs,
+                    f"-vs-r-theta={theta}deg",
+                    basedir,
+                    show=args.show,
+                )
+                plt.close()

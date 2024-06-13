@@ -6,7 +6,7 @@ from typing import List
 
 from paraview.simple import CellDatatoPointData, PlotOverLine, CreateWriter, Delete
 
-from ..method import convert_data, resultinfo, plot_greySpace
+from ..method import convert_data, resultinfo, showplot, plot_greySpace
 
 
 def plotOr(
@@ -260,3 +260,45 @@ def plotOz(
                     marker=marker,
                 )
     return axs
+
+
+def makeplot(
+    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+):
+    if args.r and args.z:
+        print(f"plots: r={args.r}, z={args.z}", flush=True)
+        if len(args.r) == 2:
+            figaxs = {}  # create dict for fig and ax
+            for z in args.z:
+                # add plot for each z to dict
+                figaxs = plotOr(
+                    reader,
+                    args.r,
+                    None,
+                    z,
+                    fieldunits,
+                    ignored_keys,
+                    basedir,
+                    marker=args.plotsMarker,
+                    axs=figaxs,
+                    greyspace=args.greyspace,
+                )  # with r=[r1, r2], z: float
+            # plot every field with all z
+            showplot(figaxs, "-vs-r", basedir, show=args.show)
+            plt.close()
+        if len(args.z) == 2:
+            figaxs = {}
+            for r in args.r:
+                figaxs = plotOz(
+                    reader,
+                    r,
+                    None,
+                    args.z,
+                    fieldunits,
+                    ignored_keys,
+                    basedir,
+                    marker=args.plotsMarker,
+                    axs=figaxs,
+                )  # with r: float, z=[z1,z2]
+            showplot(figaxs, "-vs-z", basedir, show=args.show)
+            plt.close()

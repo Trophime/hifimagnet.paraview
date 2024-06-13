@@ -9,7 +9,6 @@ from math import pi, cos, sin
 from typing import List
 
 from paraview.simple import (
-    PlotOnIntersectionCurves,
     CellDatatoPointData,
     PlotOverLine,
     Delete,
@@ -17,7 +16,7 @@ from paraview.simple import (
     SetActiveSource,
 )
 
-from ..method import convert_data, resultinfo, plot_greySpace
+from ..method import convert_data, resultinfo, showplot, plot_greySpace
 from ..view import makeclip, makecylinderslice
 
 
@@ -330,3 +329,47 @@ def plotTheta(
         print(f"Garbage collector: collected {collected} objects.", flush=True)
 
     return axs
+
+
+def makeplot(
+    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+):
+    if args.r:
+        if len(args.r) != 2 or not args.theta:
+            figaxs = {}
+            for r in args.r:
+                figaxs = plotTheta(
+                    cellsize,
+                    r,
+                    None,
+                    fieldunits,
+                    ignored_keys,
+                    basedir,
+                    marker=args.plotsMarker,
+                    axs=figaxs,
+                )
+            showplot(figaxs, "-vs-theta", basedir, show=args.show)
+            plt.close()
+
+        if args.theta and len(args.r) == 2:
+            figaxs = {}
+            for theta in args.theta:
+                figaxs = plotOr(
+                    cellsize,
+                    args.r,
+                    theta,
+                    None,
+                    fieldunits,
+                    ignored_keys,
+                    basedir,
+                    marker=args.plotsMarker,
+                    axs=figaxs,
+                    greyspace=args.greyspace,
+                )  # with r=[r1, r2]
+            showplot(
+                figaxs,
+                f"-vs-r",
+                basedir,
+                show=args.show,
+            )
+            plt.close()

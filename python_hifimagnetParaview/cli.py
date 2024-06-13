@@ -1,8 +1,5 @@
 # import vtk
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from typing import List
 
 from paraview.simple import (
     ExtractBlock,
@@ -11,7 +8,6 @@ from paraview.simple import (
     Delete,
     SaveData,
 )
-
 
 from .method import load, info, getbounds, resultinfo
 from .view import deformed, makethetaclip
@@ -114,7 +110,7 @@ def options(description: str, epilog: str):
             )
         allparsers.add_argument(
             "--greyspace",
-            help="plot grey bar for holes in plot",
+            help="plot grey bar for holes (channels/slits) in plot",
             action="store_true",
         )
         allparsers.add_argument(
@@ -167,22 +163,6 @@ def init(file: str):
     return cwd, basedir, ureg, distance_unit, reader
 
 
-def showplot(figaxs: dict, title: str, basedir: str, show: bool = True):
-    for f in figaxs:
-        print(f"plot {f}{title}", flush=True)
-        axs = figaxs[f]
-        axs[1].legend(axs[2], fontsize=18, loc="best")
-        axs[1].set_title(f"{f}{title} ", fontsize=20)
-        axs[1].grid(True, linestyle="--")
-        axs[1].tick_params(axis="x", which="major", labelsize=15)
-        axs[1].tick_params(axis="y", which="major", labelsize=15)
-        if show:
-            axs[0].show()
-        else:
-            axs[0].tight_layout()
-            axs[0].savefig(f"{basedir}/plots/{f}{title}.png", dpi=300)
-
-
 def main():
 
     parser = options("", "")
@@ -193,7 +173,7 @@ def main():
     match args.dimmension:
         case "3D":
             from .meshinfo import meshinfo
-            from .case3D.plot import plotOr, plotTheta, plotOz
+            from .case3D.plot import makeplot
             from .case3D.display3D import makeview
             from .case3D.method3D import create_dicts, create_dicts_fromjson
 
@@ -201,7 +181,7 @@ def main():
             axis = False
         case "2D":
             from .meshinfo import meshinfo
-            from .case2D.plot import plotOr, plotTheta
+            from .case2D.plot import makeplot
             from .case2D.display2D import makeview
             from .case2D.method2D import create_dicts, create_dicts_fromjson
 
@@ -209,7 +189,7 @@ def main():
             axis = False
         case "Axi":
             from .meshinfoAxi import meshinfo
-            from .caseAxi.plot import plotOr, plotOz
+            from .caseAxi.plot import makeplot
             from .case2D.display2D import makeview
             from .caseAxi.methodAxi import create_dicts, create_dicts_fromjson
 
@@ -263,151 +243,7 @@ def main():
     # Plots
     if args.plots:
         os.makedirs(f"{basedir}/plots", exist_ok=True)
-        if axis:
-            if args.r and args.z:
-                print(f"plots: r={args.r}, z={args.z}", flush=True)
-                if len(args.r) == 2:
-                    figaxs = {}  # create dict for fig and ax
-                    for z in args.z:
-                        # add plot for each z to dict
-                        figaxs = plotOr(
-                            reader,
-                            args.r,
-                            None,
-                            z,
-                            fieldunits,
-                            ignored_keys,
-                            basedir,
-                            marker=args.plotsMarker,
-                            axs=figaxs,
-                            greyspace=args.greyspace,
-                        )  # with r=[r1, r2], z: float
-                    # plot every field with all z
-                    showplot(figaxs, "-vs-r", basedir, show=args.show)
-                    plt.close()
-                if len(args.z) == 2:
-                    figaxs = {}
-                    for r in args.r:
-                        figaxs = plotOz(
-                            reader,
-                            r,
-                            None,
-                            args.z,
-                            fieldunits,
-                            ignored_keys,
-                            basedir,
-                            marker=args.plotsMarker,
-                            axs=figaxs,
-                        )  # with r: float, z=[z1,z2]
-                    showplot(figaxs, "-vs-z", basedir, show=args.show)
-                    plt.close()
-        elif dim == 3:
-            if args.r and args.z:
-                for r in args.r:
-                    figaxs = {}
-                    for z in args.z:
-                        figaxs = plotTheta(
-                            cellsize,
-                            r,
-                            z,
-                            fieldunits,
-                            ignored_keys,
-                            basedir,
-                            marker=args.plotsMarker,
-                            axs=figaxs,
-                        )
-                    showplot(
-                        figaxs,
-                        f"-vs-theta-r={r}m",
-                        basedir,
-                        show=args.show,
-                    )
-                    plt.close()
-
-                    if args.theta and len(args.z) == 2:
-                        figaxs = {}
-                        for theta in args.theta:
-                            figaxs = plotOz(
-                                reader,
-                                r,
-                                theta,
-                                args.z,
-                                fieldunits,
-                                ignored_keys,
-                                basedir,
-                                marker=args.plotsMarker,
-                                axs=figaxs,
-                            )  # with r: float, z=[z1,z2]
-                        showplot(
-                            figaxs,
-                            f"-vs-z-r={r}m",
-                            basedir,
-                            show=args.show,
-                        )
-                        plt.close()
-                if args.theta and len(args.r) == 2:
-                    for theta in args.theta:
-                        figaxs = {}
-                        for z in args.z:
-                            figaxs = plotOr(
-                                reader,
-                                args.r,
-                                theta,
-                                z,
-                                fieldunits,
-                                ignored_keys,
-                                basedir,
-                                marker=args.plotsMarker,
-                                axs=figaxs,
-                                greyspace=args.greyspace,
-                            )  # with r=[r1, r2], z: float
-                        showplot(
-                            figaxs,
-                            f"-vs-r-theta={theta}deg",
-                            basedir,
-                            show=args.show,
-                        )
-                        plt.close()
-        elif dim == 2:
-            if args.r:
-                if len(args.r) != 2 or not args.theta:
-                    figaxs = {}
-                    for r in args.r:
-                        figaxs = plotTheta(
-                            cellsize,
-                            r,
-                            None,
-                            fieldunits,
-                            ignored_keys,
-                            basedir,
-                            marker=args.plotsMarker,
-                            axs=figaxs,
-                        )
-                    showplot(figaxs, "-vs-theta", basedir, show=args.show)
-                    plt.close()
-
-                if args.theta and len(args.r) == 2:
-                    figaxs = {}
-                    for theta in args.theta:
-                        figaxs = plotOr(
-                            cellsize,
-                            args.r,
-                            theta,
-                            None,
-                            fieldunits,
-                            ignored_keys,
-                            basedir,
-                            marker=args.plotsMarker,
-                            axs=figaxs,
-                            greyspace=args.greyspace,
-                        )  # with r=[r1, r2]
-                    showplot(
-                        figaxs,
-                        f"-vs-r",
-                        basedir,
-                        show=args.show,
-                    )
-                    plt.close()
+        makeplot(args, reader, cellsize, fieldunits, ignored_keys, basedir)
 
     # When dealing with elasticity
     suffix = ""

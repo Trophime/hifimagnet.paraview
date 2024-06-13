@@ -285,6 +285,23 @@ def integrateKeys(
     return filename
 
 
+def showplot(figaxs: dict, title: str, basedir: str, show: bool = True):
+    for f in figaxs:
+        axs = figaxs[f]
+        axs[1].legend(axs[2], fontsize=18, loc="best")
+        axs[1].set_title(f"{f}{title} ", fontsize=20)
+        axs[1].grid(True, linestyle="--")
+        axs[1].tick_params(axis="x", which="major", labelsize=15)
+        axs[1].tick_params(axis="y", which="major", labelsize=15)
+        if show:
+            print(f"show {f}{title}", flush=True)
+            axs[0].show()
+        else:
+            print(f"save {f}{title}.png", flush=True)
+            axs[0].tight_layout()
+            axs[0].savefig(f"{basedir}/plots/{f}{title}.png", dpi=300)
+
+
 def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend):
     nan_positions = df[cy].isnull()
 
