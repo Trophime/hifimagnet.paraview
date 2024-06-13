@@ -17,7 +17,13 @@ from paraview.simple import (
 )
 
 from ..method import selectBlocks, convert_data
-from ..view import setCamera, makeboxclip, makeplaneslice, makeplaneOrOzslice
+from ..view import (
+    setCamera,
+    makeboxclip,
+    makeplaneslice,
+    makeplaneOrOzslice,
+    rangeHisto,
+)
 
 
 def displayField(
@@ -43,6 +49,7 @@ def displayField(
     printed: bool = True,
     excludeBlocks: bool = False,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     display field in renderview
@@ -202,6 +209,11 @@ def displayField(
     print(f"LUTColorBar.ComponentTitle={LUTColorBar.ComponentTitle}", flush=True)
     # LUTColorBar.ComponentTitle = ''
 
+    if customRangeHisto:
+        r = rangeHisto(field, fieldname, fieldunits, filename)
+        if r:
+            LUT.RescaleTransferFunction(r[0], r[1])
+
     # Properties modified on LUTColorBar
     if background:
         LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
@@ -263,6 +275,7 @@ def make3Dview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     create a 3D view
@@ -316,6 +329,7 @@ def make3Dview(
         elevation=300,
         excludeBlocks=excludeBlocks,
         background=background,
+        customRangeHisto=customRangeHisto,
     )
 
     Delete(renderView)
@@ -338,6 +352,7 @@ def makeOxOyview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     create an OxOy slice at z
@@ -387,6 +402,7 @@ def makeOxOyview(
         polargrid=True,
         comment=rf"z={z_mm} {mm}",
         background=background,
+        customRangeHisto=customRangeHisto,
     )
 
     """
@@ -417,6 +433,7 @@ def makeOrOzview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     create an OxOy slice at z
@@ -473,6 +490,7 @@ def makeOrOzview(
         grid=True,
         comment=rf"theta={theta} deg",
         background=background,
+        customRangeHisto=customRangeHisto,
     )
     # viewUp=(0, 1, 0),
     # viewAngle=30,
@@ -501,6 +519,7 @@ def makeview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
 
     print("Make 3D view with 1/4 cut out:")
@@ -514,6 +533,7 @@ def makeview(
         suffix=suffix,
         addruler=addruler,
         background=background,
+        customRangeHisto=customRangeHisto,
     )
     if args.z:
         for z in args.z:
@@ -528,11 +548,12 @@ def makeview(
                 suffix=suffix,
                 addruler=addruler,
                 background=background,
+                customRangeHisto=customRangeHisto,
             )
 
     if args.theta:
         print("Make 2D view for theta in range(0, 180, 30):")
-        for theta in range(0, 180, 30):
+        for theta in range(0, 181, 30):
             makeOrOzview(
                 input,
                 blockdata,
@@ -544,4 +565,5 @@ def makeview(
                 suffix=suffix,
                 addruler=addruler,
                 background=background,
+                customRangeHisto=customRangeHisto,
             )

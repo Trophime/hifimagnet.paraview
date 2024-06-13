@@ -53,13 +53,18 @@ def options(description: str, epilog: str):
             "--field", type=str, help="select field to display", default=""
         )
         allparsers.add_argument(
+            "--customRangeHisto",
+            help="create views custom range from histogramms",
+            action="store_true",
+        )
+        allparsers.add_argument(
             "--stats", help="activate stats calculations", action="store_true"
         )
         allparsers.add_argument(
             "--histos", help="activate histograms calculations", action="store_true"
         )
         allparsers.add_argument(
-            "--bins", type=int, help="set bins number (default 10)", default=10
+            "--bins", type=int, help="set bins number (default 10)", default=20
         )
         allparsers.add_argument(
             "--plots", help="activate plots calculations", action="store_true"
@@ -512,6 +517,7 @@ def main():
                         suffix="",
                         addruler=False,
                         background=args.transparentBG,
+                        customRangeHisto=args.customRangeHisto,
                     )
 
             if found:
@@ -536,6 +542,7 @@ def main():
                             suffix=suffix,
                             addruler=False,
                             background=args.transparentBG,
+                            customRangeHisto=args.customRangeHisto,
                         )
 
         else:
@@ -557,6 +564,7 @@ def main():
                     suffix="",
                     addruler=False,
                     background=args.transparentBG,
+                    customRangeHisto=args.customRangeHisto,
                 )
 
             if found and (
@@ -579,6 +587,7 @@ def main():
                     suffix=suffix,
                     addruler=False,
                     background=args.transparentBG,
+                    customRangeHisto=args.customRangeHisto,
                 )
 
     # for magnetfield:

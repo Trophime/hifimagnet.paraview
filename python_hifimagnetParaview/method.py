@@ -49,6 +49,30 @@ def convert_data(
     return data
 
 
+def invert_convert_data(
+    units: dict, quantity: float | list[float], qtype: str, debug: bool = False
+):
+    """
+    Returns quantity unit consistant with length unit
+    """
+
+    data = None
+    if isinstance(quantity, float):
+        data = Quantity(quantity, units[qtype][1]).to(units[qtype][0]).magnitude
+        if debug:
+            print(qtype, quantity, "data=", data, flush=True)
+    elif isinstance(quantity, list):
+        data = (
+            Quantity(quantity, units[qtype][1]).to(units[qtype][0]).magnitude.tolist()
+        )
+    else:
+        raise Exception(
+            f"convert_data/quantity: unsupported type {type(quantity)} for {qtype}"
+        )
+
+    return data
+
+
 def selectBlocks(blockdata: list, excludes: list):
     """
     select Block name not in exludes

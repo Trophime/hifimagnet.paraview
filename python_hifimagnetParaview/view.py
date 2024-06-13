@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import re
 
 from paraview.simple import (
     Clip,
@@ -8,7 +10,7 @@ from paraview.simple import (
 )
 from paraview import servermanager as sm
 
-from .method import getbounds
+from .method import getbounds, invert_convert_data
 
 
 def deformed(input, factor: float = 1, printed: bool = True):
@@ -309,3 +311,50 @@ def setCamera(
     print(f"Roll: {camera.GetRoll()}", flush=True)
 
     # print(f"help={dir(camera)}", flush=True)
+
+
+def rangeHisto(field: str, fieldname: str, fieldunits: dict, filename: str):
+    histfile = filename.replace("views/", "histograms/insert-").replace(
+        ".png", "-histogram-matplotlib.csv"
+    )
+    histfile = re.sub(r"-deformed_factor\d+", "", histfile)
+
+    try:
+        df = pd.read_csv(histfile)
+    except:
+        print(f"No histogram for {field} - cannot use custom range !")
+        return None
+
+    for col in df.columns.tolist():
+        if "Fraction of total" in col:
+            grandeur = col
+        else:
+            fieldcol = col
+
+    artefact_values = []
+    for index, row in df.iterrows():
+        fraction = row[grandeur]
+        if fraction < 0.1:
+            artefact_values.append(index)
+        else:
+            break
+
+    for index, row in df.iloc[::-1].iterrows():
+        fraction = row[grandeur]
+        if fraction < 0.1:
+            artefact_values.append(index)
+        else:
+            break
+
+    if artefact_values:
+        df.drop(index=artefact_values, inplace=True)
+    else:
+        return None
+
+    units = {field: fieldunits[fieldname]["Units"]}
+    [r1, r2] = invert_convert_data(
+        units, [df[fieldcol].iloc[0], df[fieldcol].iloc[-1]], field
+    )
+
+    print(f"Custom range({r1:.3g},{r2:.3g})")
+    return (r1, r2)

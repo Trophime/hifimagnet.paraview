@@ -17,6 +17,7 @@ from paraview.simple import (
 )
 
 from ..method import selectBlocks
+from ..view import rangeHisto
 
 
 def displayField(
@@ -33,6 +34,7 @@ def displayField(
     printed: bool = True,
     excludeBlocks: bool = False,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     display field in renderview
@@ -64,6 +66,17 @@ def displayField(
     if polargrid:
         display.PolarAxes.Visibility = 1
         # display.PolarAxes.MaximumAngle = 360.0
+        if background:
+            display.PolarAxes.PolarAxisColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarArcsColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.LastRadialAxisColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryPolarArcsColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryRadialAxesColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarAxisTitleColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.PolarAxisLabelColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.LastRadialAxisTextColor = [0.0, 0.0, 0.0]
+            display.PolarAxes.SecondaryRadialAxesTextColor = [0.0, 0.0, 0.0]
+        display.PolarAxes.Use2DMode = 0
 
     # for vector: ColorBy(display, ('CELLS', 'magnetic_field', 'Z'))
     ColorBy(display, tuple(color))
@@ -143,6 +156,11 @@ def displayField(
     print(f"LUTColorBar.ComponentTitle={LUTColorBar.ComponentTitle}", flush=True)
     # LUTColorBar.ComponentTitle = ''
 
+    if customRangeHisto:
+        r = rangeHisto(field, fieldname, fieldunits, filename)
+        if r:
+            LUT.RescaleTransferFunction(r[0], r[1])
+
     # Properties modified on LUTColorBar
     if background:
         LUTColorBar.TitleColor = [0.0, 0.0, 0.0]
@@ -204,6 +222,7 @@ def make2Dview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     """
     create a 2D view
@@ -251,6 +270,7 @@ def make2Dview(
         filename=filename,
         excludeBlocks=excludeBlocks,
         background=background,
+        customRangeHisto=customRangeHisto,
     )
 
     Delete(renderView)
@@ -269,6 +289,7 @@ def makeview(
     addruler: bool = False,
     printed: bool = True,
     background: bool = False,
+    customRangeHisto: bool = False,
 ):
     make2Dview(
         input,
@@ -280,4 +301,5 @@ def makeview(
         suffix=suffix,
         addruler=addruler,
         background=background,
+        customRangeHisto=customRangeHisto,
     )

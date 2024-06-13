@@ -95,6 +95,13 @@ def plotHistoAxi(
         )
     plt.close()
 
+    df_histo_plt = pd.DataFrame()
+    df_histo_plt[rf"{symbol} [{out_unit:~P}]"] = ticks
+    df_histo_plt["Fraction of total Volume [%]"] = counts
+    df_histo_plt.to_csv(
+        f"{basedir}/histograms/{name}-{key.replace('_Magnitude', '')}-histogram-matplotlib.csv"
+    )
+
     pass
 
 
