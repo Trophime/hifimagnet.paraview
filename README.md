@@ -17,19 +17,36 @@ Required
 * `file`: input case file (ex. Export.case)
 
 Optional
+* `--json`: 
+    * give `feelpp` json file to detect exported fields
 * `--views`: 
-    * `--field`: select a field, by default get first PointData array
+    * create views per PointData, CellData and save them to png
+    * `--field`: select a field, by default get all fields
+    * `--transparentBG`: enable transparent background on views
+    * `--customRangeHisto`: enable custom range in views, recovered from histograms
+    * `--deformedfactor`: select a deformation factor, by default 1
 * `--stats`: 
     * compute stats per PointData, CellData per block (aka `feelpp` marker) 
 * `--histos`: 
-    * compute histogram per PointData, CellData per block (aka `feelpp` marker)
+    * compute histogram per PointData, CellData per insert
+    * `--bins`: select number of bins in histograms, by default 20
 * `--plots`: 
+    * create plots per PointData, CellData using given coordinates :
     * `--z`: 
     * `--theta`: 
     * `--r`: 
-    * `--save`: save plots  
-* `--json`: 
-    * give `feelpp` json file to detect exported fields
+    * `--plotmarker`: choose marker for plots calculations
+    * `--greyspace`: plot grey bar for holes (channels/slits) in plot 
+    * `--show`: show plots
+
+Optional specific to 2D:
+* `--cliptheta`: select an angle to clip the geometry
+
+Optional specific to 3D:
+* `--channels`: enable creation of stl files for test-meshlib.py
+* `--z`: with "--views", create a OxOy view at z
+* `--theta`: with "--views", create OrOz views at theta=0/30/60/90/120/150deg
+
  
 help
 

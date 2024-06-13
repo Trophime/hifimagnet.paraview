@@ -50,12 +50,35 @@ def options(description: str, epilog: str):
             "file", type=str, help="input case file (ex. Export.case)"
         )
         allparsers.add_argument(
+            "--json", type=str, help="input json file for fieldunits", default=None
+        )
+        allparsers.add_argument(
+            "--views", help="activate views calculations", action="store_true"
+        )
+        allparsers.add_argument(
             "--field", type=str, help="select field to display", default=""
+        )
+        allparsers.add_argument(
+            "--transparentBG",
+            help="transparent background for views",
+            action="store_true",
         )
         allparsers.add_argument(
             "--customRangeHisto",
             help="create views custom range from histogramms",
             action="store_true",
+        )
+        allparsers.add_argument(
+            "--deformedfactor",
+            type=int,
+            help="select factor for deformed views",
+            default=1,
+        )
+        allparsers.add_argument(
+            "--cliptheta",
+            type=float,
+            help="select theta in deg to display",
+            default=None,
         )
         allparsers.add_argument(
             "--stats", help="activate stats calculations", action="store_true"
@@ -74,21 +97,6 @@ def options(description: str, epilog: str):
             help="Choose marker for plots calculations",
             type=str,
             default="",
-        )
-        allparsers.add_argument(
-            "--views", help="activate views calculations", action="store_true"
-        )
-        allparsers.add_argument(
-            "--transparentBG",
-            help="transparent background for views",
-            action="store_true",
-        )
-
-        allparsers.add_argument(
-            "--cliptheta",
-            type=float,
-            help="select theta in deg to display",
-            default=None,
         )
         allparsers.add_argument(
             "--r", nargs="*", type=float, help="select r in m to display"
@@ -110,14 +118,8 @@ def options(description: str, epilog: str):
             action="store_true",
         )
         allparsers.add_argument(
-            "--deformedfactor",
-            type=int,
-            help="select factor for deformed views",
-            default=1,
-        )
-        allparsers.add_argument(
-            "--save",
-            help="save graphs",
+            "--show",
+            help="show graphs",
             action="store_true",
         )
         allparsers.add_argument(
@@ -125,17 +127,6 @@ def options(description: str, epilog: str):
             help="activate verbose mode",
             action="store_true",
         )
-        allparsers.add_argument(
-            "--json", type=str, help="input json file for fieldunits", default=None
-        )
-
-    # TODO get Exports section from json model file
-    # data['PostProcess'][method_params[0]]['Exports']['expr']?
-    #
-    # provides
-    # * field: symbol, unit, support, ...
-    # * list of operations to perform (to be implemented?)
-    #
 
     return parser
 
@@ -265,7 +256,7 @@ def main():
         ComputeStats=args.stats,
         ComputeHisto=args.histos,
         BinCount=args.bins,
-        show=(not args.save),
+        show=args.show,
         verbose=args.verbose,
     )
 
@@ -292,7 +283,7 @@ def main():
                             greyspace=args.greyspace,
                         )  # with r=[r1, r2], z: float
                     # plot every field with all z
-                    showplot(figaxs, "-vs-r", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-r", basedir, show=args.show)
                     plt.close()
                 if len(args.z) == 2:
                     figaxs = {}
@@ -308,7 +299,7 @@ def main():
                             marker=args.plotsMarker,
                             axs=figaxs,
                         )  # with r: float, z=[z1,z2]
-                    showplot(figaxs, "-vs-z", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-z", basedir, show=args.show)
                     plt.close()
         elif dim == 3:
             if args.r and args.z:
@@ -329,7 +320,7 @@ def main():
                         figaxs,
                         f"-vs-theta-r={r}m",
                         basedir,
-                        show=(not args.save),
+                        show=args.show,
                     )
                     plt.close()
 
@@ -351,7 +342,7 @@ def main():
                             figaxs,
                             f"-vs-z-r={r}m",
                             basedir,
-                            show=(not args.save),
+                            show=args.show,
                         )
                         plt.close()
                 if args.theta and len(args.r) == 2:
@@ -374,7 +365,7 @@ def main():
                             figaxs,
                             f"-vs-r-theta={theta}deg",
                             basedir,
-                            show=(not args.save),
+                            show=args.show,
                         )
                         plt.close()
         elif dim == 2:
@@ -392,7 +383,7 @@ def main():
                             marker=args.plotsMarker,
                             axs=figaxs,
                         )
-                    showplot(figaxs, "-vs-theta", basedir, show=(not args.save))
+                    showplot(figaxs, "-vs-theta", basedir, show=args.show)
                     plt.close()
 
                 if args.theta and len(args.r) == 2:
@@ -414,7 +405,7 @@ def main():
                         figaxs,
                         f"-vs-r",
                         basedir,
-                        show=(not args.save),
+                        show=args.show,
                     )
                     plt.close()
 
