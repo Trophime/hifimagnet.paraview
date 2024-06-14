@@ -5,8 +5,6 @@ import gc
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import hist
 
-from typing import List
-
 from paraview.simple import (
     Delete,
     CreateView,
@@ -28,6 +26,18 @@ def plotHistoAxi(
     show: bool = True,
     verbose: bool = False,
 ):
+    """plot histogramms
+
+    Args:
+        filename (str): csv file containing datas for hist
+        name (str): block name (aka `feelpp` marker) / insert
+        key (str): field name
+        fieldunits (dict): dict field units
+        basedir (str): result directory
+        BinCount (int): number of bins in histogram
+        show (bool, optional): show histogramms. Defaults to True.
+        verbose (bool, optional): print verbose. Defaults to False.
+    """
     print(f"plotHistAxi: name={name}, key={key}, bin={BinCount}", flush=True)
 
     ax = plt.gca()
@@ -110,15 +120,26 @@ def resultHistos(
     name: str,
     Area: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     BinCount: int = 10,
     printed: bool = True,
     show: bool = False,
     verbose: bool = False,
 ):
-    """
-    histogram
+    """histogramms
+
+    Args:
+        input: paraview reader
+        name (str): block name (aka `feelpp` marker) / insert
+        Area (float): total area
+        fieldunits (dict): dictionnary of field units
+        ignored_keys (list[str]): list of ignored keys
+        basedir (str): result directory
+        BinCount (int, optional): number of bins in histograms. Defaults to 10.
+        printed (bool, optional): Defaults to True.
+        show (bool, optional): show histogramms. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
     """
     os.makedirs(f"{basedir}/histograms", exist_ok=True)
     print(f"resultHistos: name={name}, Area={Area}, BinCount={BinCount}", flush=True)

@@ -22,7 +22,7 @@ from ..view import rangeHisto
 
 def displayField(
     input,
-    selectedblocks: list,
+    selectedblocks: list[str],
     field: str,
     fieldunits: dict,
     color,
@@ -36,10 +36,26 @@ def displayField(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    display field in renderview
+    """display field in renderview
 
-    TODO: eventually add an annotation
+    Args:
+        input: paraview reader
+        selectedblocks (list[str]): list of markers of field
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color (_type_): color PointData or CellData
+        addruler (bool, optional): add ruler to view. Defaults to True.
+        renderView (optional): pre-existing renderview. Defaults to None.
+        filename (str, optional): name and path of futur view file. Defaults to None.
+        comment (str, optional): add comment. Defaults to None.
+        polargrid (bool, optional): add polar grid to view. Defaults to False.
+        printed (bool, optional): _description_. Defaults to True.
+        excludeBlocks (bool, optional): field excluded blocks. Defaults to False.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional): create custom range from field histogram. Defaults to False.
+
+    Returns:
+        renderView
     """
 
     print(f"displayField: field={field}, renderView={renderView}", flush=True)
@@ -224,8 +240,20 @@ def make2Dview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    create a 2D view
+    """create a 2D view
+
+    Args:
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        basedir (str): result directory
+        suffix (str, optional): None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
     """
     os.makedirs(f"{basedir}/views", exist_ok=True)
     print(f"make2Dview: field={field}", end="")
@@ -291,6 +319,23 @@ def makeview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
+    """create views
+
+    Args:
+        args: options
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        basedir (str):  result directory
+        suffix (str, optional):  None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
+    """
+
     make2Dview(
         input,
         blockdata,

@@ -18,7 +18,7 @@ from .method import convert_data
 
 # plot with matplotlib
 def plotHisto(
-    file,
+    file: str,
     name: str,
     key: str,
     fieldunits: dict,
@@ -28,6 +28,19 @@ def plotHisto(
     show: bool = True,
     verbose: bool = False,
 ):
+    """plot histogramms
+
+    Args:
+        file (str): csv file containing datas for hist
+        name (str): block name (aka `feelpp` marker) / insert
+        key (str): field name
+        fieldunits (dict): dictionnary field units
+        AreaorVolume (float): total area or volume
+        basedir (str): result directory
+        dim (int): geometry dimmension
+        show (bool, optional): show histogramms. Defaults to True.
+        verbose (bool, optional): print verbose. Defaults to False.
+    """
 
     if dim == 2:
         grandeur = "Area"
@@ -138,8 +151,22 @@ def getresultHisto(
     show: bool = False,
     verbose: bool = False,
 ):
-    """
-    histogram
+    """histogramms
+
+    Args:
+        input:  paraview reader
+        name (str): block name (aka `feelpp` marker) or insert or Air
+        dim (int): geometry dimmension
+        AreaorVolume (float): total area or volume
+        fieldunits (dict): dictionnary field units
+        key (str): field name
+        TypeMode (str):
+        basedir (str): result directory
+        Components (int, optional): number of components. Defaults to 1.
+        BinCount (int, optional): number of bins in histogram. Defaults to 10.
+        printed (bool, optional): Defaults to True.
+        show (bool, optional): show histogramms. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
     """
     os.makedirs(f"{basedir}/histograms", exist_ok=True)
     print(

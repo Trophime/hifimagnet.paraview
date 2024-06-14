@@ -14,8 +14,15 @@ from .method import getbounds, invert_convert_data
 
 
 def deformed(input, factor: float = 1, printed: bool = True):
-    """
-    create deformed geometry
+    """create deformed geometry
+
+    Args:
+        input: paraview reader
+        factor (float, optional): factor of deformation. Defaults to 1.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        deformed paraview reader
     """
     print(f"deformed view: factor={factor}", flush=True)
 
@@ -47,8 +54,16 @@ def deformed(input, factor: float = 1, printed: bool = True):
 
 
 def makeclip(input, name: str, invert: bool = True, printed: bool = True):
-    """
-    create a plane clip from input dataset
+    """_summary_
+
+    Args:
+        input: paraview reader
+        name (str): clip name
+        invert (bool, optional): invert the clip. Defaults to True.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        clipped paraview reader
     """
     print(f"makeclip: name={name}, invert={invert}", flush=True)
 
@@ -76,8 +91,16 @@ def makeclip(input, name: str, invert: bool = True, printed: bool = True):
 
 
 def makethetaclip(input, theta: float, invert: bool = True, printed: bool = True):
-    """
-    create a plane clip from input dataset
+    """create a clip with a theta angle from 2D input dataset
+
+    Args:
+        input: paraview reader
+        theta (float): theta angle for the clip
+        invert (bool, optional): invert the clip. Defaults to True.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        clipped paraview reader
     """
     print(f"makeclip: theta={theta}°, invert={invert}", flush=True)
     radian = theta * np.pi / 180.0
@@ -106,8 +129,14 @@ def makethetaclip(input, theta: float, invert: bool = True, printed: bool = True
 
 
 def makeboxclip(input, name: str):
-    """
-    create a box clip from input dataset
+    """create a box clip from input dataset
+
+    Args:
+        input: paraview reader
+        name (str): name of the clip
+
+    Returns:
+        clipped paraview reader
     """
     print(f"makeboxclip: name={name}", flush=True)
 
@@ -134,8 +163,16 @@ def makeboxclip(input, name: str):
 
 
 def makecylinderslice(input, name: str, r: float, printed: bool = True):
-    """
-    create a cylinder slice from input dataset
+    """create a cylinder slice from input dataset
+
+    Args:
+        input: paraview reader
+        name (str): name of the slice
+        r (float): r coordinates of the slice in m
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        sliced paraview reader
     """
     print(f"makecylinderslice: name={name}, r={r}", flush=True)
 
@@ -160,12 +197,15 @@ def makecylinderslice(input, name: str, r: float, printed: bool = True):
 
 
 def makeplaneOrOzslice(input, name: str, theta: float = 0.0):
-    """
-    create a OrOz plane slice from input dataset
+    """create a OrOz plane slice from input dataset
 
-    input:
-    name:
-    theta: angle of normal in degrees
+    Args:
+        input (_type_): paraview reader
+        name (str): name of the slice
+        theta (float, optional): angle of normal in degrees. Defaults to 0.0.
+
+    Returns:
+        sliced paraview reader
     """
 
     from math import cos, sin, pi
@@ -188,8 +228,15 @@ def makeplaneOrOzslice(input, name: str, theta: float = 0.0):
 
 
 def makeplaneslice(input, name: str, z: float = 0.0):
-    """
-    create a plane slice from input dataset
+    """create a plane slice from input dataset
+
+    Args:
+        input (_type_): paraview reader
+        name (str): name of slice
+        z (float, optional): z coordinates of the plane in m. Defaults to 0.0.
+
+    Returns:
+        sliced paraview reader
     """
     print(f"makeplaneslice: name={name}, z={z}", flush=True)
 
@@ -215,8 +262,18 @@ def makesphereslice(
     theta: float = 0,
     z: float = 0,
 ):
-    """
-    create a plane slice from input dataset
+    """create a sphere slice from input dataset
+
+    Args:
+        input: paraview reader
+        name (str): name of slice
+        radius (float): radius of slice
+        r (float, optional): r coordinates in meter. Defaults to 0.
+        theta (float, optional): angle in degree. Defaults to 0.
+        z (float, optional): z coordinates in meter. Defaults to 0.
+
+    Returns:
+        sliced paraview reader
     """
     from math import pi, cos, sin
 
@@ -252,12 +309,22 @@ def setCamera(
     elevation: float = 0,
     azimuth: float = 0,
 ):
-    """
-    adapt camera settings
+    """adapt camera settings
 
     ref:
     https://docs.paraview.org/en/latest/ReferenceManual/customizingParaView.html#camera-settings
     https://docs.paraview.org/en/latest/Tutorials/ClassroomTutorials/pythonAndBatchParaViewAndPython.html#control-the-camera
+
+    Args:
+        renderView: render view
+        Position (tuple, optional): _description_. Defaults to None.
+        Focal (tuple, optional): _description_. Defaults to None.
+        Up (tuple, optional): _description_. Defaults to None.
+        Angle (float, optional): _description_. Defaults to 30.
+        pProjection (bool, optional): _description_. Defaults to True.
+        roll (float, optional): _description_. Defaults to 0.
+        elevation (float, optional): _description_. Defaults to 0.
+        azimuth (float, optional): _description_. Defaults to 0.
     """
 
     renderView.ResetCamera()
@@ -313,7 +380,20 @@ def setCamera(
     # print(f"help={dir(camera)}", flush=True)
 
 
-def rangeHisto(field: str, fieldname: str, fieldunits: dict, filename: str):
+def rangeHisto(field: str, fieldname: str, fieldunits: dict, filename: str) -> tuple:
+    """find custom range from histogram of field
+    (removes data from extremities whose area/volume is less than 0.1% of total area/volume)
+
+    Args:
+        field (str): name of field
+        fieldname (str): name of field without feelpp prefixes (ex: cfpes.expr.)
+        fieldunits (dict): dict of units for fields
+        filename (str): name of futur view file to find corresponding histogram
+
+    Returns:
+        tuple: new custom range (None if doesn't change/ hist doesn't exist)
+    """
+
     histfile = filename.replace("views/", "histograms/insert-").replace(
         ".png", "-histogram-matplotlib.csv"
     )

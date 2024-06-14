@@ -2,8 +2,6 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 
-from typing import List
-
 from paraview.simple import CellDatatoPointData, PlotOverLine, CreateWriter, Delete
 
 from ..method import convert_data, resultinfo, showplot, plot_greySpace
@@ -12,17 +10,32 @@ from ..method import convert_data, resultinfo, showplot, plot_greySpace
 def plotOr(
     input,
     r: list[float],
-    theta: float,
     z: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
     greyspace: bool = False,
 ) -> dict:
+    """plot vs r for a given z
 
+    Args:
+        input: paraview reader
+        r (list[float]): [r_start, r_end]
+        z (float): z coordinate of the plot in m
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+        greyspace (bool, optional): plot grey vertical bars to fill holes in plots (slits/channels). Defaults to False.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
+    """
     [r0, r1] = r
 
     cellDatatoPointData1 = CellDatatoPointData(
@@ -150,16 +163,30 @@ def plotOr(
 def plotOz(
     input,
     r: float,
-    theta: float,
     z: list[float],
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
 ) -> dict:
+    """plot along z for a given r
 
+    Args:
+        input: paraview reader
+        r (float): r coordinates in m
+        z (list[float]): [z_start, z_end]
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
+    """
     [z0, z1] = z
 
     cellDatatoPointData1 = CellDatatoPointData(
@@ -263,8 +290,21 @@ def plotOz(
 
 
 def makeplot(
-    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+    args, reader, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str
 ):
+    """different plot situations for Axi
+
+    * if 2 args.r and args.z: plot Or from r0 to r1 at z=args.z
+    * if 2 args.z and args.r: plot Oz from z0 to z1 at r=args.r
+
+    Args:
+        args: options
+        reader: paraview reader
+        cellsize: paraview reader
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+    """
     if args.r and args.z:
         print(f"plots: r={args.r}, z={args.z}", flush=True)
         if len(args.r) == 2:
@@ -274,7 +314,6 @@ def makeplot(
                 figaxs = plotOr(
                     reader,
                     args.r,
-                    None,
                     z,
                     fieldunits,
                     ignored_keys,
@@ -292,7 +331,6 @@ def makeplot(
                 figaxs = plotOz(
                     reader,
                     r,
-                    None,
                     args.z,
                     fieldunits,
                     ignored_keys,

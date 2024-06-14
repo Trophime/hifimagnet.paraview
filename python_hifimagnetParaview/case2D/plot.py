@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import pi, arctan2
 from math import pi, cos, sin
-from typing import List
 
 from paraview.simple import (
     CellDatatoPointData,
@@ -24,15 +23,31 @@ def plotOr(
     input,
     r: list[float],
     theta: float,
-    z: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig ax for each field
     greyspace: bool = False,
 ) -> dict:
+    """plot vs r for a given theta
+
+    Args:
+        input: paraview reader
+        r (list[float]): [r_start, r_end]
+        theta (float): angle of the plot in degrees
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+        greyspace (bool, optional): plot grey vertical bars to fill holes in plots (slits/channels). Defaults to False.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
+    """
 
     [r0, r1] = r
     radian = theta * pi / 180.0
@@ -159,17 +174,31 @@ def plotOr(
 def plotTheta(
     input,
     r: float,
-    z: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     verbose: bool = False,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
 ) -> dict:
-    """
+    """plot along theta for a given r
+
     for theta, need to apply CellDataToPointData filter
+
+    Args:
+        input: paraview reader
+        r (float): r coordinates in m
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        verbose (bool, optional): _description_. Defaults to False.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
     """
 
     print(f"plotTheta: r={r}", flush=True)
@@ -332,8 +361,21 @@ def plotTheta(
 
 
 def makeplot(
-    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+    args, reader, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str
 ):
+    """different plot situations for 2D
+
+    * if 2 args.r and args.theta: plot Or from r0 to r1 at theta=args.theta
+    * if not args.theta and args.r: plot Otheta ar r=args.r
+
+    Args:
+        args: options
+        reader: paraview reader
+        cellsize: paraview reader
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+    """
     if args.r:
         if len(args.r) != 2 or not args.theta:
             figaxs = {}
@@ -341,7 +383,6 @@ def makeplot(
                 figaxs = plotTheta(
                     cellsize,
                     r,
-                    None,
                     fieldunits,
                     ignored_keys,
                     basedir,
@@ -358,7 +399,6 @@ def makeplot(
                     cellsize,
                     args.r,
                     theta,
-                    None,
                     fieldunits,
                     ignored_keys,
                     basedir,

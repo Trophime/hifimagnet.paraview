@@ -2,8 +2,6 @@ import pandas as pd
 import os
 
 from tabulate import tabulate
-from typing import List
-from math import pi, sqrt
 
 from paraview.simple import (
     DescriptiveStatistics,
@@ -18,7 +16,17 @@ from .histo import getresultHisto
 
 
 def createTable(file: str, key: str, name: str, verbose: bool = False):
+    """create statistics table
 
+    Args:
+        file (str): csv file name
+        key (str): field name
+        name (str): block name
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        _stat
+    """
     csv = pd.read_csv(file)
     keys = csv.columns.values.tolist()
     if verbose:
@@ -54,7 +62,19 @@ def createTable(file: str, key: str, name: str, verbose: bool = False):
 def createStatsTable(
     stats: list, name: str, fieldunits: dict, basedir: str, ureg, verbose: bool = False
 ) -> pd.DataFrame:
+    """create statistic table & csv file
 
+    Args:
+        stats (list): statistics
+        name (str): block name
+        fieldunits (dict): dict of field ubits
+        basedir (str): result directory
+        ureg: pint unit registry
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        pd.DataFrame: statistics dataframe
+    """
     os.makedirs(f"{basedir}/stats", exist_ok=True)
     # TODO add a column with the Block Name
     # the column Block Name in cvs is not what I think
@@ -253,9 +273,22 @@ def getresultStats(
     basedir: str,
     printed: bool = True,
     verbose: bool = False,
-):
-    """
-    compute stats for key
+) -> str:
+    """compute stats for key
+
+    Args:
+        input (_type_): paraview reader
+        name (str): block name
+        key (str): field name
+        AttributeMode (str): "Point Data" or "Cell Data" or "Field Data"
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        str: csv file name
+    """ """
+    
     """
     os.makedirs(f"{basedir}/stats", exist_ok=True)
 
@@ -317,7 +350,7 @@ def resultStats(
     dim: int,
     AreaorVolume: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     ureg,
     basedir: str,
     histo: bool = False,
@@ -325,10 +358,24 @@ def resultStats(
     show: bool = False,
     verbose: bool = False,
 ) -> dict:
-    """
-    compute stats for PointData, CellData and FieldData
+    """compute stats for PointData, CellData and FieldData
 
-    returns a dict
+    Args:
+        input: paraview reader
+        name (str): block name
+        dim (int): geometry dimmension
+        AreaorVolume (float): total area or volume
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        ureg (_type_): pint unit registry
+        basedir (str): result directory
+        histo (bool, optional): compute histograms. Defaults to False.
+        BinCount (int, optional): number of bins in histograms. Defaults to 10.
+        show (bool, optional): show histograms. Defaults to False.
+        verbose (bool, optional): prin verbose. Defaults to False.
+
+    Returns:
+        dict: statistics dict
     """
     datadict = resultinfo(input, ignored_keys, verbose)
     if verbose:

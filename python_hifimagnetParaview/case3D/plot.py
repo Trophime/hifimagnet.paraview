@@ -6,8 +6,6 @@ from matplotlib.ticker import MaxNLocator
 from numpy import pi, arctan2
 from math import pi, cos, sin
 
-from typing import List
-
 from paraview.simple import (
     PlotOnIntersectionCurves,
     CellDatatoPointData,
@@ -27,13 +25,31 @@ def plotOr(
     theta: float,
     z: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
     greyspace: bool = False,
 ) -> dict:
+    """plot vs r for a given theta and a given z
+
+    Args:
+        input: paraview reader
+        r (list[float]): [r_start, r_end]
+        theta (float): angle of the plot in degree
+        z (float): z coordinate of the plot in m
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+        greyspace (bool, optional): plot grey vertical bars to fill holes in plots (slits/channels). Defaults to False.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
+    """
     [r0, r1] = r
     radian = theta * pi / 180.0
 
@@ -174,13 +190,29 @@ def plotOz(
     theta: float,
     z: list[float],
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
 ) -> dict:
+    """plot along z for a given r and for a given theta
 
+    Args:
+        input: paraview reader
+        r (float): r coordinates in m
+        theta (float): angle of the plot in degrees
+        z (list[float]): [z_start, z_end]
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
+    """
     [z0, z1] = z
     radian = theta * pi / 180.0
 
@@ -207,7 +239,7 @@ def plotOz(
         file,
         key: str,
         theta: float,
-        z: List[float],
+        z: list[float],
         fieldunits: dict,
         basedir: str,
         axs=None,
@@ -307,15 +339,29 @@ def plotTheta(
     r: float,
     z: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     printed: bool = True,
     verbose: bool = False,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
 ) -> dict:
-    """
-    for theta, need to apply CellDataToPointData filter
+    """plot along theta for a given r and for a given z
+
+    Args:
+        input: paraview reader
+        r (float): r coordinates in m
+        z (float): z coordinates in m
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        verbose (bool, optional): _description_. Defaults to False.
+        marker (str, optional): plot on specific marker. Defaults to None.
+        axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+
+    Returns:
+        dict: contains fig,ax,legend for each exported fields
     """
 
     print(f"plotTheta: r={r}, z={z}", flush=True)
@@ -496,8 +542,22 @@ def plotTheta(
 
 
 def makeplot(
-    args, reader, cellsize, fieldunits: dict, ignored_keys: List[str], basedir: str
+    args, reader, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str
 ):
+    """different plot situations for 3D
+
+    * if args.r and args.z: plot Otheta
+    * if 2 args.r and args.theta and args.z: plot Or from r0 to r1 at theta=args.theta, z=args.z
+    * if 2 args.z and args.theta and args.r: plot Oz from z0 to z1 at theta=args.theta, r=args.r
+
+    Args:
+        args: options
+        reader: paraview reader
+        cellsize: paraview reader
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+    """
     if args.r and args.z:
         for r in args.r:
             figaxs = {}

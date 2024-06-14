@@ -28,7 +28,7 @@ from ..view import (
 
 def displayField(
     input,
-    selectedblocks: list,
+    selectedblocks: list[str],
     field: str,
     fieldunits: dict,
     color,
@@ -51,18 +51,35 @@ def displayField(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    display field in renderview
+    """display field in renderview
 
-    Azimuth - rotate around the vertical axis.
-    Elevation - rotate around the horizontal axis in the plane of the screen.
-    Roll - rotate around the axis coming out of the screen.
-    View angle - basically a zoom in.
-    Camera position - where the camera is.
-    Focal point - where the camera is looking.
-    View Up - I don't know what this is (default = (0, 1, 0) for 3D, view from +Oz)
+    Args:
+        input: paraview reader
+        selectedblocks (list[str]): list of markers of field
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color (_type_): color PointData or CellData
+        addruler (bool, optional): add ruler to view. Defaults to True.
+        renderView (optional): pre-existing renderview. Defaults to None.
+        filename (str, optional): name and path of futur view file. Defaults to None.
+        position (tuple, optional): where the camera is. Defaults to None.
+        focal (tuple, optional): where the camera is looking. Defaults to None.
+        viewUp (tuple, optional): I don't know what this is (default = (0, 1, 0) for 3D, view from +Oz). Defaults to None.
+        viewAngle (float, optional): basically a zoom in. Defaults to 30.
+        parallelProjection (bool, optional): _description_. Defaults to False.
+        roll (float, optional): rotate around the axis coming out of the screen. Defaults to 0.
+        elevation (float, optional): rotate around the horizontal axis in the plane of the screen. Defaults to 0.
+        azimuth (float, optional): rotate around the vertical axis. Defaults to 0.
+        comment (str, optional): add comment. Defaults to None.
+        grid (bool, optional): add grid to view. Defaults to False.
+        polargrid (bool, optional): add polar grid to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        excludeBlocks (bool, optional): field excluded blocks. Defaults to False.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional): create custom range from field histogram. Defaults to False.
 
-    TODO: eventually add an annotation
+    Returns:
+        renderView
     """
 
     print(f"displayField: field={field}, renderView={renderView}", flush=True)
@@ -277,8 +294,20 @@ def make3Dview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    create a 3D view
+    """create a 3D view
+
+    Args:
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        basedir (str): result directory
+        suffix (str, optional): None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
     """
     os.makedirs(f"{basedir}/views", exist_ok=True)
     print(f"make3Dview: field={field}", end="")
@@ -354,8 +383,21 @@ def makeOxOyview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    create an OxOy slice at z
+    """create an OxOy slice at z
+
+    Args:
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        z (float): z coordinates of the slice in m
+        basedir (str): result directory
+        suffix (str, optional): None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
     """
     print(f"makeOxOyview: field={field}", end="")
     if suffix:
@@ -435,8 +477,21 @@ def makeOrOzview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
-    """
-    create an OxOy slice at z
+    """create an OrOy slice at theta
+
+    Args:
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        theta (float): angle of normal in degrees.
+        basedir (str): result directory
+        suffix (str, optional): None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
     """
     from math import pi, cos, sin
 
@@ -521,6 +576,25 @@ def makeview(
     background: bool = False,
     customRangeHisto: bool = False,
 ):
+    """create views
+
+    if args.z : make OxOy view
+    if args.theta: make OrOz view
+
+    Args:
+        args: options
+        input: paraview reader
+        blockdata: blockdata from meshinfo
+        field (str): field name
+        fieldunits (dict): dict of field units
+        color: color for PointData or CellData
+        basedir (str):  result directory
+        suffix (str, optional):  None or -deformed. Defaults to None.
+        addruler (bool, optional): add ruler to view. Defaults to False.
+        printed (bool, optional): Defaults to True.
+        background (bool, optional): transparent background (& text black). Defaults to False.
+        customRangeHisto (bool, optional):  create custom range from field histogram. Defaults to False.
+    """
 
     print("Make 3D view with 1/4 cut out:")
     make3Dview(

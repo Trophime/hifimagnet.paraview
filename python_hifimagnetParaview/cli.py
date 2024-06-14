@@ -128,10 +128,22 @@ def options(description: str, epilog: str):
 
 
 def init(file: str):
+    """initialize paraview reader, pint units, results directory
+
+    Args:
+        file (str): paraview result file
+
+    Returns:
+        cwd (str): current directory
+        basedir (str): result directory
+        ureg : pint unit registry
+        distance_unit (str): unit of distance
+        reader : paraview reader file
+    """
+
     # get current working directory
     cwd = os.getcwd()
     print("workingdir=", cwd)
-
     basedir = f"{os.path.dirname(file)}/paraview.exports"
     # basedir = os.path.dirname(args.file).replace(f"{toolbox}.export", "paraview.export")
     print("Results are stored in: ", basedir, flush=True)

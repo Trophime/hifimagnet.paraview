@@ -1,7 +1,5 @@
 import gc
 
-from typing import List
-
 from paraview.simple import (
     CellSize,
     ExtractBlock,
@@ -19,10 +17,19 @@ from .stats import resultStats, createStatsTable
 
 
 def scaleField(input, key: str, nkey: str, AttributeType: str, factor: float):
-    """
-    scale a Field by 1/factor
+    """scale a Field by 1/factor
 
-    AttributeType: 'Cell Data'
+    AttributeType:
+
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): _description_
+        AttributeType (str): 'Cell Data'
+        factor (float): scale factor
+
+    Returns:
+        scaled paraview reader
     """
     calculator1 = Calculator(registrationName="Calculator1", Input=input)
     calculator1.AttributeType = AttributeType  # 'Cell Data'
@@ -34,10 +41,17 @@ def scaleField(input, key: str, nkey: str, AttributeType: str, factor: float):
 
 
 def addField(input, key: str, nkey: str, AttributeType: str, factor: float):
-    """
-    add factor to Field
+    """add factor to Field
 
-    AttributeType: 'Cell Data'
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): _description_
+        AttributeType (str): 'Cell Data'
+        factor (float): add factor
+
+    Returns:
+        paraview reader with added field
     """
     calculator1 = Calculator(registrationName="Calculator1", Input=input)
     calculator1.AttributeType = AttributeType  # 'Cell Data'
@@ -54,8 +68,7 @@ def addField(input, key: str, nkey: str, AttributeType: str, factor: float):
 
 
 def rectTocylField(input, key: str, nkey: str, AttributeType: str):
-    """
-    compute r and theta component of a vector Field
+    """compute r and theta component of a vector Field
 
     vr = ux * cos + uy * sin
     vt = ux* -sin + uy * cos
@@ -67,7 +80,17 @@ def rectTocylField(input, key: str, nkey: str, AttributeType: str):
 
     ux: "thermo_electric.electric.current_density_X"
 
-    must be: AttributeType: 'Point Data'
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): _description_
+        AttributeType (str): 'Point Data'
+
+    Raises:
+        RuntimeError: rectTocylField: key - unsupported AttributeType
+
+    Returns:
+        cylindric paraview reader
     """
 
     if AttributeType != "Point Data":
@@ -122,10 +145,17 @@ def rectTocylField(input, key: str, nkey: str, AttributeType: str):
 def createVectorNorm(
     input, key: str, nkey: str, AttributeType: str, printed: bool = True
 ):
-    """
-    create Norm of a vector
+    """create Norm of a vector
 
-    AttributeType: 'Cell Data'
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): _description_
+        AttributeType (str): 'Cell Data'
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        paraview reader
     """
 
     calculator1 = Calculator(registrationName="Calculator1", Input=input)
@@ -147,7 +177,7 @@ def meshinfo(
     input,
     dim: int,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     ureg,
     ComputeStats: bool = True,
@@ -157,8 +187,26 @@ def meshinfo(
     verbose: bool = False,
     printed: bool = True,
 ) -> tuple:
-    """
-    display geometric info from input dataset
+    """display geometric info from input dataset
+
+    Args:
+        input: paraview reader
+        dim (int): geometry dimmension
+        fieldunits (dict): dictionnary of field units
+        ignored_keys (list[str]): list of ignored fields
+        basedir (str): result directory
+        ureg: pint unit registry
+        ComputeStats (bool, optional): compute statistics. Defaults to True.
+        ComputeHisto (bool, optional): compute histograms. Defaults to False.
+        BinCount (int, optional): number of bins in histograms. Defaults to 10.
+        show (bool, optional): show histograms. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        cellsize: updated paraview reader
+        blockdata (dict): dict of blocks data
+        stats (dict): dict of statistics
     """
 
     # rectTocyl: need CellDataToPointData before

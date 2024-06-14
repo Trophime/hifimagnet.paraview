@@ -2,7 +2,6 @@ import pandas as pd
 import os
 
 from tabulate import tabulate
-from typing import List
 from math import pi, sqrt
 
 from paraview.simple import (
@@ -17,7 +16,15 @@ from .method import convert_data, resultinfo
 def createStatsTable(
     stats: list, name: str, fieldunits: dict, basedir: str, verbose: bool = False
 ):
+    """create statistics table and csv file
 
+    Args:
+        stats (list): statistics list
+        name (str): block name
+        fieldunits (dict): dict of field units
+        basedir (str): result directory
+        verbose (bool, optional): print verbose. Defaults to False.
+    """
     # TODO add a column with the Block Name
     # the column Block Name in cvs is not what I think
     # it is either "Primary Statistics" or "Derived Statistics"
@@ -135,7 +142,7 @@ def resultStats(
     dim: int,
     Area: float,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     ureg,
     basedir: str,
     histo: bool = False,
@@ -143,10 +150,24 @@ def resultStats(
     show: bool = False,
     verbose: bool = False,
 ) -> dict:
-    """
-    compute stats for PointData, CellData and FieldData
+    """compute stats for PointData, CellData and FieldData
 
-    returns a dict
+    Args:
+        input: paraview reader
+        name (str): block name
+        dim (int): geometry dimmension
+        AreaorVolume (float): total area or volume
+        fieldunits (dict): dict of field units
+        ignored_keys (list[str]): list of ignored fields
+        ureg (_type_): pint unit registry
+        basedir (str): result directory
+        histo (bool, optional): compute histograms. Defaults to False.
+        BinCount (int, optional): number of bins in histograms. Defaults to 10.
+        show (bool, optional): show histograms. Defaults to False.
+        verbose (bool, optional): prin verbose. Defaults to False.
+
+    Returns:
+        dict: statistics dict
     """
     os.makedirs(f"{basedir}/stats", exist_ok=True)
 

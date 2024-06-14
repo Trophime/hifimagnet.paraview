@@ -1,12 +1,14 @@
 import json
 
 
-def get_materials_markers(materials: dict):
-    """
-    find all materials marker
+def get_materials_markers(materials: dict) -> list[str]:
+    """find all materials markers
 
-    model_mat: dict of the specific model wanted
-    model_mat: dict of  all the materials
+    Args:
+        materials (dict): dict of all the materials
+
+    Returns:
+        list[str]: list all the markers in materials
     """
     markers_list = []
     for mat in materials.keys():
@@ -22,11 +24,14 @@ def get_materials_markers(materials: dict):
 
 
 def json_get(data: dict, *keys):
-    """
-    find part of dict from keys, return None if it doesn't exist
+    """find part of dict from keys, return None if it doesn't exist
 
-    data: dict to explore
-    keys: keys that form the path in the dict (data[key1][key2][key3]....)
+    Args:
+        data (dict): dict to explore
+        keys (str): keys that form the path in the dict (data[key1][key2][key3]....)
+
+    Returns:
+        data[key1][key2][key3]... or None if doesn't exist
     """
     current_data = data
     if isinstance(current_data, dict):
@@ -41,6 +46,17 @@ def json_get(data: dict, *keys):
 
 
 def jsonFeel_to_fieldDict(data: dict, PostProcess: dict, dictType: dict) -> dict:
+    """From Feelpp json config file, create a fieldType dict
+
+    Args:
+        data (dict): dict of all the Feelpp json config file
+        PostProcess (dict): dict post-processing part
+        dictType (dict): dict translating name of field in feelpp json to type
+
+    Returns:
+        dict: fieldType dict
+    """
+
     dict = {}
 
     exportcfpdes = json_get(PostProcess, "cfpdes", "Exports")
@@ -80,19 +96,30 @@ def jsonFeel_to_fieldDict(data: dict, PostProcess: dict, dictType: dict) -> dict
                 exclude = []
                 include = json_get(export["expr"][f], "markers")
                 if include:
+                    if isinstance(include, str):
+                        include = [include]
                     exclude = list(set(allmarkers) - set(include))
                 dict[f] = {"Type": dictType[f], "Exclude": exclude}
     return dict
 
 
-def returnExportFields(jsonmodel: str, basedir: str):
+def returnExportFields(jsonmodel: str, basedir: str) -> dict:
+    """create FieldType.json, with all exported fields and their type
+
+    Args:
+        jsonmodel (str): json file from feelpp or with fields and type
+        basedir (str): result directory
+
+    Returns:
+        dict: fieldType dict
+    """
     with open(jsonmodel, "r") as jsonfile:
         data = json.load(jsonfile)
 
-    with open("./python_hifimagnetParaview/FeelppType.json", "r") as jsonfile:
-        feel_dictType = json.load(jsonfile)
     PostProcess = json_get(data, "PostProcess")
     if PostProcess:
+        with open("./python_hifimagnetParaview/FeelppType.json", "r") as jsonfile:
+            feel_dictType = json.load(jsonfile)
         data = jsonFeel_to_fieldDict(data, PostProcess, feel_dictType)
 
     with open(f"{basedir}/FieldType.json", "w") as fp:

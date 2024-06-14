@@ -2,7 +2,6 @@ import gc
 import os
 import re
 import pandas as pd
-from typing import List
 
 from paraview.simple import (
     OpenDataFile,
@@ -27,9 +26,20 @@ with warnings.catch_warnings():
 
 def convert_data(
     units: dict, quantity: float | list[float], qtype: str, debug: bool = False
-):
-    """
-    Returns quantity unit consistant with length unit
+) -> float | list[float]:
+    """Returns quantity unit consistant with length unit
+
+    Args:
+        units (dict): dict of the form {field: units}
+        quantity (float | list[float]): quantity to convert
+        qtype (str): name of quantity/field
+        debug (bool, optional): print debug. Defaults to False.
+
+    Raises:
+        Exception: convert_data/quantity: unsupported type
+
+    Returns:
+        float | list[float]: converted quantity
     """
 
     data = None
@@ -51,9 +61,20 @@ def convert_data(
 
 def invert_convert_data(
     units: dict, quantity: float | list[float], qtype: str, debug: bool = False
-):
-    """
-    Returns quantity unit consistant with length unit
+) -> float | list[float]:
+    """Returns quantity unit to its original unit consistant with length unit
+
+    Args:
+        units (dict): dict of the form {field: units}
+        quantity (float | list[float]): quantity to convert
+        qtype (str): name of quantity/field
+        debug (bool, optional): print debug. Defaults to False.
+
+     Raises:
+        Exception: convert_data/quantity: unsupported type
+
+    Returns:
+        float | list[float]: converted quantity
     """
 
     data = None
@@ -73,13 +94,15 @@ def invert_convert_data(
     return data
 
 
-def selectBlocks(blockdata: list, excludes: list):
-    """
-    select Block name not in exludes
+def selectBlocks(blockdata: list, excludes: list[str]) -> list[str]:
+    """select Block name not in exludes
 
-    blockdata: list of block names
-    excludes: list of names to be excluded
+    Args:
+        blockdata (list): list of block names
+        excludes (list[str]): list of block names to be excluded
 
+    Returns:
+        list[str]: list of included block names
     """
     isolants = []
     if "Isolant" in excludes:
@@ -110,9 +133,15 @@ def selectBlocks(blockdata: list, excludes: list):
 
 
 def info(input):
+    """returns info about input dataset
+
+    Args:
+        input: paraview reader
+
+    Returns:
+        dataInfo
     """
-    returns info about input dataset
-    """
+
     print("info:", flush=True)
 
     dataInfo = input.GetDataInformation()
@@ -126,10 +155,18 @@ def info(input):
     return dataInfo
 
 
-def resultinfo(input, ignored_keys: List[str], verbose: bool = False) -> dict:
+def resultinfo(input, ignored_keys: list[str], verbose: bool = False) -> dict:
+    """returns a dict gathering info on PointData, CellData and FieldData
+
+    Args:
+        input: paraview reader
+        ignored_keys (list[str]): list of ignored key
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        dict: info dictionnary
     """
-    returns a dict gathering info on PointData, CellData and FieldData
-    """
+
     if verbose:
         print(f"resultinfo: input={input}", flush=True)
 
@@ -162,11 +199,18 @@ def resultinfo(input, ignored_keys: List[str], verbose: bool = False) -> dict:
 
 
 def getresultInfo(
-    key, ignored_keys: List[str], verbose: bool = False, printed: bool = True
+    key, ignored_keys: list[str], verbose: bool = False, printed: bool = True
 ) -> dict:
-    """
-    print info on key
+    """print info on key
 
+    Args:
+        key: key object
+        ignored_keys (list[str]): list of ignored keys
+        verbose (bool, optional): print verbose. Defaults to False.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        dict: info dictionnary
     """
 
     name = key.Name
@@ -192,8 +236,13 @@ def getresultInfo(
 
 
 def getbounds(input):
-    """
-    returns bounds of input geometry
+    """returns bounds of input geometry
+
+    Args:
+        input: paraview reader
+
+    Returns:
+        bounds
     """
 
     dataInfo = input.GetDataInformation()
@@ -202,8 +251,14 @@ def getbounds(input):
 
 
 def load(file: str, printed: bool = True):
-    """
-    create dataset from file
+    """create dataset from file
+
+    Args:
+        file (str): file name
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        paraview reader
     """
 
     print(f"Load Ensight case: {file}", flush=True)
@@ -219,8 +274,17 @@ def load(file: str, printed: bool = True):
 
 
 def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
-    """
-    compute moment of order N
+    """compute moment of order N
+
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): field surname
+        order (int): order of moment
+        AttributeType (str): Point Data or Cell Data
+
+    Returns:
+        calculator
     """
 
     calculator1 = Calculator(registrationName=f"moment{order}", Input=input)
@@ -240,11 +304,20 @@ def momentN(input, key: str, nkey: str, order: int, AttributeType: str):
 
 def integrateKeys(
     input, name: str, basedir: str, printed: bool = True, verbose: bool = False
-):
-    """
-    compute integral of Data over area/volume
+) -> str:
+    """compute integral of Data over area/volume
 
     to get values use a spreadsheet
+
+    Args:
+        input: paraview reader
+        name (str): _description_
+        basedir (str): result directory
+        printed (bool, optional): Defaults to True.
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        str: file name
     """
     os.makedirs(f"{basedir}/stats", exist_ok=True)
     integratedvalues = IntegrateVariables(Input=input)
@@ -285,24 +358,47 @@ def integrateKeys(
     return filename
 
 
-def showplot(figaxs: dict, title: str, basedir: str, show: bool = True):
+def showplot(figaxs: dict, suffix: str, basedir: str, show: bool = True):
+    """show or save plot for each field in figaxs dictionnary
+
+    Args:
+        figaxs (dict): dict containing fig,ax,legend for each exported fields
+        suffix (str): title suffix
+        basedir (str): result directory
+        show (bool, optional): show plot (False=Save plot). Defaults to True.
+    """
+
     for f in figaxs:
         axs = figaxs[f]
         axs[1].legend(axs[2], fontsize=18, loc="best")
-        axs[1].set_title(f"{f}{title} ", fontsize=20)
+        axs[1].set_title(f"{f}{suffix} ", fontsize=20)
         axs[1].grid(True, linestyle="--")
         axs[1].tick_params(axis="x", which="major", labelsize=15)
         axs[1].tick_params(axis="y", which="major", labelsize=15)
         if show:
-            print(f"show {f}{title}", flush=True)
+            print(f"show {f}{suffix}", flush=True)
             axs[0].show()
         else:
-            print(f"save {f}{title}.png", flush=True)
+            print(f"save {f}{suffix}.png", flush=True)
             axs[0].tight_layout()
-            axs[0].savefig(f"{basedir}/plots/{f}{title}.png", dpi=300)
+            axs[0].savefig(f"{basedir}/plots/{f}{suffix}.png", dpi=300)
 
 
-def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend):
+def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend: list[str]):
+    """plot grey vertical bars to fill holes in plots (slits/channels) (works in 2D vs r)
+
+
+    Args:
+        df (pd.DataFrame): DataFrame of the plot
+        cx (str): column name of xaxis in plot
+        cy (str): column name of yaxis in plot
+        ax: ax of the plot
+        legend (list[str]):  legend (to hide grey bars)
+
+    Returns:
+        list[str]: updated legend
+    """
+
     nan_positions = df[cy].isnull()
 
     # Fill areas before and after NaN values

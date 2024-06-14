@@ -1,7 +1,6 @@
 import gc
 import pandas as pd
 
-from typing import List
 from tabulate import tabulate
 from math import pi, sqrt
 
@@ -26,14 +25,24 @@ from .histoAxi import resultHistos
 
 def part_integrate(
     input,
-    name,
-    selected_blocks: list,
+    name: str,
+    selected_blocks: list[str],
     basedir: str,
     merge: bool = True,
     verbose: bool = False,
-):
-    """
-    compute integral over input
+) -> pd.DataFrame:
+    """compute integral over input
+
+    Args:
+        input: paraview reader
+        name (str): block name
+        selected_blocks (list[str]): block selection
+        basedir (str): result directory
+        merge (bool, optional): merge selected blocks. Defaults to True.
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        pd.DataFrame: integral dataframe
     """
     print(f"part_integrate: name={name}", flush=True)
 
@@ -124,7 +133,7 @@ def part(
     pinput,
     name: str,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     ureg,
     basedir: str,
     ComputeHisto: bool,
@@ -132,6 +141,23 @@ def part(
     show: bool = False,
     verbose: bool = False,
 ):
+    """stats & histos for a part
+
+    Args:
+        pinput: paraview reader
+        name (str): block name
+        fieldunits (dict): dict of diel units
+        ignored_keys (list[str]): list of ignored fields
+        ureg: pint unit registry
+        basedir (str): result directory
+        ComputeHisto (bool): compute histograms
+        BinCount (int, optional): number of bins in histogram. Defaults to 20.
+        show (bool, optional): show histogramms. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
+
+    Returns:
+        vol, statsdict
+    """
     pointDatatoCellData = PointDatatoCellData(pinput)
     cellsize = CellSize(pointDatatoCellData)
     # set some params
@@ -230,7 +256,7 @@ def meshinfo(
     input,
     dim: int,
     fieldunits: dict,
-    ignored_keys: List[str],
+    ignored_keys: list[str],
     basedir: str,
     ureg,
     ComputeStats: bool = True,
@@ -239,9 +265,27 @@ def meshinfo(
     show: bool = False,
     verbose: bool = False,
     printed: bool = True,
-):
-    """
-    display geometric info from input dataset
+) -> tuple:
+    """display geometric info from input dataset
+
+    Args:
+        input (_type_): paraview reader
+        dim (int): geometry dimmension
+        fieldunits (dict): dictionnary of field units
+        ignored_keys (list[str]): list of ignored keys
+        basedir (str): result directory
+        ureg: pint unit registry
+        ComputeStats (bool, optional): compute statistics. Defaults to True.
+        ComputeHisto (bool, optional): compute histograms. Defaults to False.
+        BinCount (int, optional): number of bins in histograms. Defaults to 10.
+        show (bool, optional): show histograms. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
+        printed (bool, optional): Defaults to True.
+
+    Returns:
+        cellsize: updated paraview reader
+        blockdata (dict): dict of blocks data
+        stats (dict): dict of statistics
     """
 
     """
