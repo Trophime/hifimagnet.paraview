@@ -1,10 +1,19 @@
 import os
 import json
 import copy
-from typing import List
 
 
 def dictTypeUnits(ureg, distance_unit: str):
+    """create dict of units per Type for 3D
+
+    Args:
+        ureg: pint unit registry
+        distance_unit (str): unit of distance
+
+    Returns:
+        dict: dict of unit per type
+    """
+
     TypeUnits = {
         "ThermalConductivity": {
             "Symbol": "k",
@@ -47,6 +56,38 @@ def dictTypeUnits(ureg, distance_unit: str):
         },
         "MagneticField": {
             "Symbol": "B",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_x": {
+            "Symbol": "Bx",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_y": {
+            "Symbol": "By",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_z": {
+            "Symbol": "Bz",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_ur": {
+            "Symbol": "Br",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_ut": {
+            "Symbol": "Bt",
+            "mSymbol": r"$B_{\theta}$",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticFieldnorm": {
+            "Symbol": "B",
+            "mSymbol": r"$\| B \|$",
             "Units": [ureg.tesla, ureg.tesla],
             "Exclude": [],
         },
@@ -93,7 +134,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "ElectricField_r": {
+        "ElectricField_ur": {
             "Symbol": "Er",
             "Units": [
                 ureg.volt / ureg.meter**2,
@@ -101,7 +142,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "ElectricField_t": {
+        "ElectricField_ut": {
             "Symbol": "Et",
             "mSymbol": r"$E_{\theta}$",
             "Units": [
@@ -110,7 +151,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "ElectricField_norm": {
+        "ElectricFieldnorm": {
             "Symbol": "E",
             "mSymbol": r"$\| E \|$",
             "Units": [
@@ -156,7 +197,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "CurrentDensity_r": {
+        "CurrentDensity_ur": {
             "Symbol": "Jr",
             "Units": [
                 ureg.ampere / ureg.meter**2,
@@ -164,7 +205,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "CurrentDensity_t": {
+        "CurrentDensity_ut": {
             "Symbol": "Jt",
             "mSymbol": r"$J_{\theta}$",
             "Units": [
@@ -173,7 +214,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air", "Isolant"],
         },
-        "CurrentDensity_norm": {
+        "CurrentDensitynorm": {
             "Symbol": "J",
             "mSymbol": r"$\| J \|$",
             "Units": [
@@ -233,7 +274,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air"],
         },
-        "Displacement_r": {
+        "Displacement_ur": {
             "Symbol": "ur",
             "mSymbol": r"$u_r$",
             "Units": [
@@ -242,7 +283,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air"],
         },
-        "Displacement_t": {
+        "Displacement_ut": {
             "Symbol": "ut",
             "mSymbol": r"$u_{\theta}$",
             "Units": [
@@ -251,12 +292,152 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air"],
         },
-        "Displacement_norm": {
+        "Displacementnorm": {
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
                 ureg.meter / ureg.second,
                 ureg.Unit(distance_unit) / ureg.second,
+            ],
+            "Exclude": ["Air"],
+        },
+        "ForceLaplace": {
+            "Symbol": "F",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_x": {
+            "Symbol": "Fx",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_y": {
+            "Symbol": "Fy",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_z": {
+            "Symbol": "Fz",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_ur": {
+            "Symbol": "Fr",
+            "mSymbol": r"$F_r$",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_ut": {
+            "Symbol": "Ft",
+            "mSymbol": r"$F_{\theta}$",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplacenorm": {
+            "Symbol": "F",
+            "mSymbol": r"$\| F \|$",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "Strain_00": {
+            "Symbol": "strain_00",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{00}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_01": {
+            "Symbol": "strain_01",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{01}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_02": {
+            "Symbol": "strain_02",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{02}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_10": {
+            "Symbol": "strain_10",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{10}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_11": {
+            "Symbol": "strain_11",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{11}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_12": {
+            "Symbol": "strain_12",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{12}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_20": {
+            "Symbol": "strain_20",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{20}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_21": {
+            "Symbol": "strain_21",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{21}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
+        "Strain_22": {
+            "Symbol": "strain_22",
+            "mSymbol": r"$\bar{\bar{\epsilon}}_{22}$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
             ],
             "Exclude": ["Air"],
         },
@@ -317,6 +498,57 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": [],
         },
+        "MagneticPotential_x": {
+            "Symbol": "Ax",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
+        "MagneticPotential_y": {
+            "Symbol": "Ay",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
+        "MagneticPotential_z": {
+            "Symbol": "Az",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
+        "MagneticPotential_ur": {
+            "Symbol": "Ar",
+            "mSymbol": r"$A_r$",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
+        "MagneticPotential_ut": {
+            "Symbol": "At",
+            "mSymbol": r"$A_{\theta}$",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
+        "MagneticPotentialnorm": {
+            "Symbol": "A",
+            "mSymbol": r"$\| A \|$",
+            "Units": [
+                ureg.ampere / ureg.meter,
+                ureg.ampere / ureg.Unit(distance_unit),
+            ],
+            "Exclude": [],
+        },
         "HoopStrain": {
             "Symbol": "HoopStrain",
             "mSymbol": r"$\bar{\bar{\epsilon}}_{Hoop}$",
@@ -341,32 +573,44 @@ def dictTypeUnits(ureg, distance_unit: str):
 
 
 def addFieldToFieldunits(
-    fieldunits: dict, name: str, Type: str, Exclude: List[str], TypeUnits: dict
+    fieldunits: dict, name: str, Type: str, Exclude: list[str], TypeUnits: dict
 ):
-    if Type in ["Displacement", "ElectricField", "CurrentDensity"]:
-        fieldunits[name] = TypeUnits[Type]
-        fieldunits[f"{name}_x"] = TypeUnits[f"{Type}_x"]
-        fieldunits[f"{name}_y"] = TypeUnits[f"{Type}_y"]
-        fieldunits[f"{name}_z"] = TypeUnits[f"{Type}_z"]
-        fieldunits[f"{name}_ur"] = TypeUnits[f"{Type}_r"]
-        fieldunits[f"{name}_ut"] = TypeUnits[f"{Type}_t"]
-        fieldunits[f"{name}norm"] = TypeUnits[f"{Type}_norm"]
-        if Exclude:
-            fieldunits[name]["Exclude"] = Exclude
-            fieldunits[f"{name}_x"]["Exclude"]  = Exclude
-            fieldunits[f"{name}_y"]["Exclude"]  = Exclude
-            fieldunits[f"{name}_z"]["Exclude"]  = Exclude
-            fieldunits[f"{name}_ur"]["Exclude"] = Exclude
-            fieldunits[f"{name}_ut"]["Exclude"] = Exclude
-            fieldunits[f"{name}norm"]["Exclude"] = Exclude
+    """add field to fieldunits dict with units corresponding to its type
+
+    Args:
+        fieldunits (dict): dict of field units
+        name (str): name of field
+        Type (str): type of field
+        Exclude (list[str]): list of excluded marker of field
+        TypeUnits (dict): dict of Type units
+
+    Returns:
+        dict: updated fieldunits
+    """
+
+    if Type in [
+        "Displacement",
+        "ElectricField",
+        "CurrentDensity",
+        "MagneticField",
+        "ForceLaplace",
+        "MagneticPotential",
+    ]:
+        for suffix in ["", "_x", "_y", "_z", "_ur", "_ut", "norm"]:
+            fieldunits[f"{name}{suffix}"] = TypeUnits[f"{Type}{suffix}"]
+            if Exclude:
+                fieldunits[f"{name}{suffix}"]["Exclude"] = Exclude
     elif Type in ["Stress"]:
-        fieldunits[f"{name}_0"] = TypeUnits[f"{Type}_0"]
-        fieldunits[f"{name}_1"] = TypeUnits[f"{Type}_1"]
-        fieldunits[f"{name}_2"] = TypeUnits[f"{Type}_2"]
-        if Exclude:
-            fieldunits[f"{name}_0"]["Exclude"] = Exclude
-            fieldunits[f"{name}_1"]["Exclude"] = Exclude
-            fieldunits[f"{name}_2"]["Exclude"] = Exclude
+        for suffix in range(3):
+            fieldunits[f"{name}_{suffix}"] = TypeUnits[f"{Type}_{suffix}"]
+            if Exclude:
+                fieldunits[f"{name}_{suffix}"]["Exclude"] = Exclude
+    elif Type in ["Strain"]:
+        for i in range(3):
+            for j in range(3):
+                fieldunits[f"{name}_{i}{j}"] = TypeUnits[f"{Type}_{i}{j}"]
+                if Exclude:
+                    fieldunits[f"{name}_{i}{j}"]["Exclude"] = Exclude
     else:
         fieldunits[name] = TypeUnits[Type]
         if Exclude:
@@ -376,6 +620,18 @@ def addFieldToFieldunits(
 
 
 def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: str):
+    """create fieldunits dict for 3D from json dict
+
+    Args:
+        field_dict (dict): dictionnary of exported fields
+        ureg: pint unit registry
+        distance_unit (str): unit of distance
+        basedir (str): result directory
+
+    Returns:
+        fieldunits, ignored_keys
+    """
+
     fieldunits = {
         "coord": {
             "Symbol": "r",
@@ -431,6 +687,17 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
 
 
 def create_dicts(ureg, distance_unit: str, basedir: str):
+    """create fieldunits dict for 3D from nothing (old version)
+
+    Args:
+        ureg: pint unit registry
+        distance_unit (str): unit fo distance
+        basedir (str): result directory
+
+    Returns:
+        fieldunits, ignored_keys
+    """
+
     fieldunits = {
         "coord": {
             "Symbol": "r",

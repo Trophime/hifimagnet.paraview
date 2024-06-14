@@ -1,10 +1,19 @@
 import os
 import json
 import copy
-from typing import List
 
 
 def dictTypeUnits(ureg, distance_unit: str):
+    """create dict of units per Type for Axi
+
+    Args:
+        ureg: pint unit registry
+        distance_unit (str): unit of distance
+
+    Returns:
+        dict: dict of unit per type
+    """
+
     TypeUnits = {
         "ThermalConductivity": {
             "Symbol": "k",
@@ -114,7 +123,7 @@ def dictTypeUnits(ureg, distance_unit: str):
             ],
             "Exclude": ["Air"],
         },
-        "Displacement_norm": {
+        "Displacementnorm": {
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
@@ -249,28 +258,32 @@ def dictTypeUnits(ureg, distance_unit: str):
 
 
 def addFieldToFieldunits(
-    fieldunits: dict, name: str, Type: str, Exclude: List[str], TypeUnits: dict
+    fieldunits: dict, name: str, Type: str, Exclude: list[str], TypeUnits: dict
 ):
+    """add field to fieldunits dict with units corresponding to its type
+
+    Args:
+        fieldunits (dict): dict of field units
+        name (str): name of field
+        Type (str): type of field
+        Exclude (list[str]): list of excluded marker of field
+        TypeUnits (dict): dict of Type units
+
+    Returns:
+        dict: updated fieldunits
+    """
+
     if Type in ["Displacement"]:
-        fieldunits[name] = TypeUnits[Type]
-        fieldunits[f"{name}_r"] = TypeUnits[f"{Type}_r"]
-        fieldunits[f"{name}_z"] = TypeUnits[f"{Type}_z"]
-        fieldunits[f"{name}norm"] = TypeUnits[f"{Type}_norm"]
-        if Exclude:
-            fieldunits[name]["Exclude"] = Exclude
-            fieldunits[f"{name}_r"]["Exclude"] = Exclude
-            fieldunits[f"{name}_z"]["Exclude"] = Exclude
-            fieldunits[f"{name}norm"]["Exclude"] = Exclude
+        for suffix in ["", "_r", "_z", "norm"]:
+            fieldunits[f"{name}{suffix}"] = TypeUnits[f"{Type}{suffix}"]
+            if Exclude:
+                fieldunits[f"{name}{suffix}"]["Exclude"] = Exclude
     elif Type in ["Stress", "Strain"]:
-        fieldunits[f"{name}_00"] = TypeUnits[f"{Type}_00"]
-        fieldunits[f"{name}_01"] = TypeUnits[f"{Type}_01"]
-        fieldunits[f"{name}_10"] = TypeUnits[f"{Type}_10"]
-        fieldunits[f"{name}_11"] = TypeUnits[f"{Type}_11"]
-        if Exclude:
-            fieldunits[f"{name}_00"]["Exclude"] = Exclude
-            fieldunits[f"{name}_01"]["Exclude"] = Exclude
-            fieldunits[f"{name}_10"]["Exclude"] = Exclude
-            fieldunits[f"{name}_11"]["Exclude"] = Exclude
+        for i in range(2):
+            for j in range(2):
+                fieldunits[f"{name}_{i}{j}"] = TypeUnits[f"{Type}_{i}{j}"]
+                if Exclude:
+                    fieldunits[f"{name}_{i}{j}"]["Exclude"] = Exclude
     else:
         fieldunits[name] = TypeUnits[Type]
         if Exclude:
@@ -280,6 +293,17 @@ def addFieldToFieldunits(
 
 
 def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: str):
+    """create fieldunits dict for Axi from json dict
+
+    Args:
+        field_dict (dict): dictionnary of exported fields
+        ureg: pint unit registry
+        distance_unit (str): unit of distance
+        basedir (str): result directory
+
+    Returns:
+        fieldunits, ignored_keys
+    """
     # use r"$\theta$" for displaying units in mathplotlib
     fieldunits = {
         "coord": {
@@ -336,6 +360,16 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
 
 
 def create_dicts(ureg, distance_unit: str, basedir: str):
+    """create fieldunits dict for Axi from nothing (old version)
+
+    Args:
+        ureg: pint unit registry
+        distance_unit (str): unit fo distance
+        basedir (str): result directory
+
+    Returns:
+        fieldunits, ignored_keys
+    """
     # use r"$\theta$" for displaying units in mathplotlib
     fieldunits = {
         "VolumicMass": {
