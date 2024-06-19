@@ -86,7 +86,12 @@ def plotHistoAxi(
     plt.xlabel(rf"{msymbol}[{out_unit:~P}]")
     plt.ylabel(total_key)
     plt.xticks(ticks, rotation=45, ha="right")
-    plt.title(f"{name}: {key}")
+    title = f"{name}: {key}"
+    if fieldunits["Current"]["Val"]:
+        title = title + f"\nI={fieldunits['Current']['Val']}"
+    if fieldunits["B0"]["Val"]:
+        title = title + f"\nB0={fieldunits['B0']['Val']}T"
+    plt.title(title)
     plt.grid(True)
     # plt.legend(False)
 

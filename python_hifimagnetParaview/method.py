@@ -12,6 +12,8 @@ from paraview.simple import (
     Show,
     ExportView,
     Delete,
+    ProbeLocation,
+    SaveData,
 )
 
 from pint import Quantity
@@ -235,6 +237,23 @@ def getresultInfo(
     return datadict
 
 
+def keyinfo(key: str) -> tuple:
+    keyinfo = key.split(".")
+    if len(keyinfo) == 1:
+        fieldname = key
+        toolbox = None
+        physic = None
+    elif len(keyinfo) == 2:
+        toolbox = None
+        (physic, fieldname) = keyinfo
+    elif len(keyinfo) == 3:
+        (toolbox, physic, fieldname) = keyinfo
+    else:
+        raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+
+    return (toolbox, physic, fieldname)
+
+
 def getbounds(input):
     """returns bounds of input geometry
 
@@ -358,20 +377,23 @@ def integrateKeys(
     return filename
 
 
-def showplot(figaxs: dict, suffix: str, basedir: str, show: bool = True):
+def showplot(
+    figaxs: dict, suffix: str, basedir: str, title: str = "", show: bool = True
+):
     """show or save plot for each field in figaxs dictionnary
 
     Args:
         figaxs (dict): dict containing fig,ax,legend for each exported fields
-        suffix (str): title suffix
+        suffix (str): file and title suffix
         basedir (str): result directory
+        title (str): title suffix
         show (bool, optional): show plot (False=Save plot). Defaults to True.
     """
 
     for f in figaxs:
         axs = figaxs[f]
         axs[1].legend(axs[2], fontsize=18, loc="best")
-        axs[1].set_title(f"{f}{suffix} ", fontsize=20)
+        axs[1].set_title(f"{f}{suffix}{title}", fontsize=20)
         axs[1].grid(True, linestyle="--")
         axs[1].tick_params(axis="x", which="major", labelsize=15)
         axs[1].tick_params(axis="y", which="major", labelsize=15)
@@ -422,3 +444,72 @@ def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend: list[str]):
             x2 = None
             legend.append("_nolegend_")
     return legend
+
+
+def getcurrent(current: str, marker: str = None):
+    if current.endswith(".csv"):
+        df = pd.read_csv(current)
+        for col in df.columns():
+            if "intensity" in col or "Intensity" in col:
+                current = f"{int(df[col].iloc[-1])}A"
+                break
+    else:
+        current += "A"
+
+    return current
+
+
+def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -> float:
+    B0 = None
+    for f in fieldtype:
+        print(f)
+        print(fieldtype[f]["Type"])
+        if fieldtype[f]["Type"] == "MagneticField":
+            B0 = f
+            break
+
+    if not B0:
+        return None
+    # create a new 'Probe Location'
+    probeLocation = ProbeLocation(
+        registrationName="ProbeLocation",
+        Input=reader,
+        ProbeType="Fixed Radius Point Source",
+    )
+
+    # init the 'Fixed Radius Point Source' selected for 'ProbeType'
+    probeLocation.ProbeType.Center = [0.0, 0.0, 0.0]
+
+    for key in list(probeLocation.PointData.keys()) + list(
+        probeLocation.CellData.keys()
+    ):
+        (toolbox, physic, fieldname) = keyinfo(key)
+        if B0 == fieldname and key in list(probeLocation.CellData.keys()):
+            SaveData(
+                f"{basedir}insert-B0.csv",
+                proxy=probeLocation,
+                ChooseArraysToWrite=1,
+                CellDataArrays=[key],
+            )
+            savedkey = key
+        if B0 == fieldname and key in list(probeLocation.PointData.keys()):
+            SaveData(
+                f"{basedir}/insert-B0.csv",
+                proxy=probeLocation,
+                ChooseArraysToWrite=1,
+                PointDataArrays=[key],
+            )
+            savedkey = key
+
+    try:
+        df = pd.read_csv(f"{basedir}/insert-B0.csv")
+
+        if axis:
+            B0 = abs(df[f"{savedkey}:1"].iloc[-1])
+        elif dim == 2:
+            B0 = abs(df[f"{savedkey}:1"].iloc[-1])
+        elif dim == 3:
+            B0 = abs(df[f"{savedkey}:2"].iloc[-1])
+        return round(B0, 1)
+    except:
+        return None

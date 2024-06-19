@@ -559,6 +559,11 @@ def makeplot(
         basedir (str): result directory
     """
     if args.r and args.z:
+        title = ""
+        if fieldunits["Current"]["Val"]:
+            title = title + f"\nI={fieldunits['Current']['Val']}"
+        if fieldunits["B0"]["Val"]:
+            title = title + f"\nB0={fieldunits['B0']['Val']}T"
         for r in args.r:
             figaxs = {}
             for z in args.z:
@@ -576,6 +581,7 @@ def makeplot(
                 figaxs,
                 f"-vs-theta-r={r}m",
                 basedir,
+                title=title,
                 show=args.show,
             )
             plt.close()
@@ -598,6 +604,7 @@ def makeplot(
                     figaxs,
                     f"-vs-z-r={r}m",
                     basedir,
+                    title=title,
                     show=args.show,
                 )
                 plt.close()
@@ -621,6 +628,7 @@ def makeplot(
                     figaxs,
                     f"-vs-r-theta={theta}deg",
                     basedir,
+                    title=title,
                     show=args.show,
                 )
                 plt.close()

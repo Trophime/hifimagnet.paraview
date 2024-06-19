@@ -82,12 +82,17 @@ def plotHisto(
     csv = csv.assign(bin_extents=np.array([f"{val:.2E}" for val in out_values], float))
     csv[f"{grandeur}_total"] = csv[f"{grandeur}_total"] / AreaorVolume * 100
 
+    title = f"{name}: {key}"
+    if fieldunits["Current"]["Val"]:
+        title = title + f"\nI={fieldunits['Current']['Val']}"
+    if fieldunits["B0"]["Val"]:
+        title = title + f"\nB0={fieldunits['B0']['Val']}T"
     csv.plot.bar(
         x="bin_extents",
         y=f"{grandeur}_total",
         xlabel=rf"{msymbol}[{out_unit:~P}]",
         ylabel=f"Fraction of total {grandeur} [%]",
-        title=f"{name}: {key}",
+        title=title,
         grid=True,
         legend=False,
         rot=45,

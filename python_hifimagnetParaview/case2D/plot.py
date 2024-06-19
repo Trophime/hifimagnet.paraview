@@ -377,6 +377,11 @@ def makeplot(
         basedir (str): result directory
     """
     if args.r:
+        title = ""
+        if fieldunits["Current"]["Val"]:
+            title = title + f"\nI={fieldunits['Current']['Val']}"
+        if fieldunits["B0"]["Val"]:
+            title = title + f"\nB0={fieldunits['B0']['Val']}T"
         if len(args.r) != 2 or not args.theta:
             figaxs = {}
             for r in args.r:
@@ -389,7 +394,7 @@ def makeplot(
                     marker=args.plotsMarker,
                     axs=figaxs,
                 )
-            showplot(figaxs, "-vs-theta", basedir, show=args.show)
+            showplot(figaxs, f"-vs-theta", basedir, title=title, show=args.show)
             plt.close()
 
         if args.theta and len(args.r) == 2:
@@ -410,6 +415,7 @@ def makeplot(
                 figaxs,
                 f"-vs-r",
                 basedir,
+                title=title,
                 show=args.show,
             )
             plt.close()

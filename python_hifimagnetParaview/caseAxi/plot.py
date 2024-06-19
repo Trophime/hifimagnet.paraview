@@ -306,6 +306,11 @@ def makeplot(
         basedir (str): result directory
     """
     if args.r and args.z:
+        title = ""
+        if fieldunits["Current"]["Val"]:
+            title = title + f"\nI={fieldunits['Current']['Val']}"
+        if fieldunits["B0"]["Val"]:
+            title = title + f"\nB0={fieldunits['B0']['Val']}T"
         print(f"plots: r={args.r}, z={args.z}", flush=True)
         if len(args.r) == 2:
             figaxs = {}  # create dict for fig and ax
@@ -323,7 +328,7 @@ def makeplot(
                     greyspace=args.greyspace,
                 )  # with r=[r1, r2], z: float
             # plot every field with all z
-            showplot(figaxs, "-vs-r", basedir, show=args.show)
+            showplot(figaxs, f"-vs-r", basedir, title=title, show=args.show)
             plt.close()
         if len(args.z) == 2:
             figaxs = {}
@@ -338,5 +343,5 @@ def makeplot(
                     marker=args.plotsMarker,
                     axs=figaxs,
                 )  # with r: float, z=[z1,z2]
-            showplot(figaxs, "-vs-z", basedir, show=args.show)
+            showplot(figaxs, f"-vs-z", basedir, title=title, show=args.show)
             plt.close()

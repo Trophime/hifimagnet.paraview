@@ -9,7 +9,7 @@ from paraview.simple import (
     SaveData,
 )
 
-from .method import load, info, getbounds, resultinfo
+from .method import load, info, getbounds, resultinfo, getcurrent, getB0
 from .view import deformed, makethetaclip
 from .json import returnExportFields
 
@@ -47,6 +47,9 @@ def options(description: str, epilog: str):
         )
         allparsers.add_argument(
             "--json", type=str, help="input json file for fieldunits", default=None
+        )
+        allparsers.add_argument(
+            "--current", type=str, help="input current value or csv", default=None
         )
         allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
@@ -222,6 +225,14 @@ def main():
 
     if dim == 2 and args.cliptheta:
         reader = makethetaclip(reader, args.cliptheta, invert=False)
+
+    if args.current:
+        fieldunits["Current"]["Val"] = getcurrent(args.current)
+
+    B0 = getB0(reader, fieldtype, basedir, dim, axis)
+    if B0:
+        print(f"B0={B0}T")
+        fieldunits["B0"]["Val"] = B0
 
     if args.field:
         if args.field in list(reader.CellData.keys()):
