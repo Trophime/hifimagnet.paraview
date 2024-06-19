@@ -102,24 +102,24 @@ def dictTypeUnits(ureg, distance_unit: str):
         "Displacement": {
             "Symbol": "u",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
         "Displacement_r": {
             "Symbol": "ur",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
         "Displacement_z": {
             "Symbol": "uz",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -127,8 +127,8 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -328,6 +328,20 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
                 ureg.Unit(distance_unit) ** 3,
             ],
         },
+        "Current": {
+            "Val": None,
+            "Units": [
+                ureg.amperes,
+                ureg.amperes,
+            ],
+        },
+        "B0": {
+            "Val": None,
+            "Units": [
+                ureg.teslas,
+                ureg.teslas,
+            ],
+        },
     }
 
     TypeUnits = dictTypeUnits(ureg, distance_unit)
@@ -351,6 +365,8 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Cos",
         "Sin",
         "cfpdes.pid",
+        "Current",
+        "B0",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:
@@ -509,24 +525,24 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
         "displacement": {
             "Symbol": "u",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
         "displacement_r": {
             "Symbol": "ur",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
         "displacement_z": {
             "Symbol": "uz",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -534,8 +550,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },

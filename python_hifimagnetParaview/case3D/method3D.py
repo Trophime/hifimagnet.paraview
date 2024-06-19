@@ -242,8 +242,8 @@ def dictTypeUnits(ureg, distance_unit: str):
         "Displacement": {
             "Symbol": "u",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -251,8 +251,8 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Symbol": "ux",
             "mSymbol": r"$u_x$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -260,8 +260,8 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Symbol": "uy",
             "mSymbol": r"$u_y$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -269,8 +269,8 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Symbol": "uz",
             "mSymbol": r"$u_z$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -278,28 +278,28 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Symbol": "ur",
             "mSymbol": r"$u_r$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
-            "Exclude": ["Air"],
+            "Exclude": ["Air", "oLead", "iL1"],
         },
         "Displacement_ut": {
             "Symbol": "ut",
             "mSymbol": r"$u_{\theta}$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
-            "Exclude": ["Air"],
+            "Exclude": ["Air", "oLead", "iL1"],
         },
         "Displacementnorm": {
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
-            "Exclude": ["Air"],
+            "Exclude": ["Air", "oLead", "iL1"],
         },
         "ForceLaplace": {
             "Symbol": "F",
@@ -652,6 +652,20 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
             "Symbol": "V",
             "Units": [ureg.meter**3, ureg.Unit(distance_unit) ** 3],
         },
+        "Current": {
+            "Val": None,
+            "Units": [
+                ureg.amperes,
+                ureg.amperes,
+            ],
+        },
+        "B0": {
+            "Val": None,
+            "Units": [
+                ureg.teslas,
+                ureg.teslas,
+            ],
+        },
     }
 
     TypeUnits = dictTypeUnits(ureg, distance_unit)
@@ -678,6 +692,8 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Cos",
         "Sin",
         "coord",
+        "Current",
+        "B0",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:
@@ -874,8 +890,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
         "displacement": {
             "Symbol": "u",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -883,8 +899,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "ux",
             "mSymbol": r"$u_x$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -892,8 +908,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "uy",
             "mSymbol": r"$u_y$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -901,8 +917,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "uz",
             "mSymbol": r"$u_z$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -910,8 +926,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "ur",
             "mSymbol": r"$u_r$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -919,8 +935,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "ut",
             "mSymbol": r"$u_\theta$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
@@ -928,8 +944,8 @@ def create_dicts(ureg, distance_unit: str, basedir: str):
             "Symbol": "u",
             "mSymbol": r"$\| u \|$",
             "Units": [
-                ureg.meter / ureg.second,
-                ureg.Unit(distance_unit) / ureg.second,
+                ureg.meter,
+                ureg.Unit(distance_unit),
             ],
             "Exclude": ["Air"],
         },
