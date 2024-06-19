@@ -72,7 +72,8 @@ def displayField(
         textDisplay.FontSize = 24
         textDisplay.Bold = 1
         textDisplay.Italic = 1
-        textDisplay.Color = [0.0, 0.0, 0.0]
+        if background:
+            textDisplay.Color = [0.0, 0.0, 0.0]
 
     display = Show(input, renderView)
 
@@ -288,6 +289,11 @@ def make2Dview(
     if suffix is not None:
         filename = f"{basedir}/views/{field}{suffix}.png"
 
+    comm = ""
+    if fieldunits["Current"]["Val"]:
+        comm = f'I={fieldunits["Current"]["Val"]}'
+    if fieldunits["B0"]["Val"]:
+        comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
     renderView = displayField(
         input,
         selectedblocks,
@@ -296,6 +302,7 @@ def make2Dview(
         color,
         addruler=addruler,
         filename=filename,
+        comment=comm,
         excludeBlocks=excludeBlocks,
         background=background,
         customRangeHisto=customRangeHisto,

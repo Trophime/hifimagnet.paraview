@@ -96,7 +96,8 @@ def displayField(
         textDisplay.FontSize = 24
         textDisplay.Bold = 1
         textDisplay.Italic = 1
-        textDisplay.Color = [0.0, 0.0, 0.0]
+        if background:
+            textDisplay.Color = [0.0, 0.0, 0.0]
 
     display = Show(input, renderView)
 
@@ -341,6 +342,11 @@ def make3Dview(
     if suffix is not None:
         filename = f"{basedir}/views/{field}{suffix}.png"
 
+    comm = ""
+    if fieldunits["Current"]["Val"]:
+        comm = f'I={fieldunits["Current"]["Val"]}'
+    if fieldunits["B0"]["Val"]:
+        comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
     # position is None
     renderView = displayField(
         boxclip,
@@ -356,6 +362,7 @@ def make3Dview(
         parallelProjection=False,
         roll=90,
         elevation=300,
+        comment=comm,
         excludeBlocks=excludeBlocks,
         background=background,
         customRangeHisto=customRangeHisto,
@@ -429,6 +436,11 @@ def makeOxOyview(
     if suffix is not None:
         filename = f"{basedir}/views/{field}{suffix}-OxOy-z={z_mm}{mm}.png"
 
+    comm = ""
+    if fieldunits["Current"]["Val"]:
+        comm = f'\nI={fieldunits["Current"]["Val"]}'
+    if fieldunits["B0"]["Val"]:
+        comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
     # position is None
     renderView = displayField(
         slice,
@@ -442,7 +454,7 @@ def makeOxOyview(
         focal=(0, 0, z),
         roll=0,
         polargrid=True,
-        comment=rf"z={z_mm} {mm}",
+        comment=rf"z={z_mm} {mm}{comm}",
         background=background,
         customRangeHisto=customRangeHisto,
     )
@@ -531,6 +543,11 @@ def makeOrOzview(
     if theta > 90:
         roll = 90
 
+    comm = ""
+    if fieldunits["Current"]["Val"]:
+        comm = f'\nI={fieldunits["Current"]["Val"]}'
+    if fieldunits["B0"]["Val"]:
+        comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
     # position is None
     renderView = displayField(
         slice,
@@ -543,7 +560,7 @@ def makeOrOzview(
         position=(cos(radian - pi / 2.0), sin(radian - pi / 2.0), 0),
         roll=roll,
         grid=True,
-        comment=rf"theta={theta} deg",
+        comment=rf"theta={theta} deg{comm}",
         background=background,
         customRangeHisto=customRangeHisto,
     )
