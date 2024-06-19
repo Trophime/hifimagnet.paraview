@@ -10,7 +10,7 @@ from paraview.simple import (
     Show,
 )
 
-from .method import convert_data, resultinfo
+from .method import convert_data, resultinfo, keyinfo
 
 
 def createStatsTable(
@@ -74,16 +74,7 @@ def createStatsTable(
             # print(f"DescriptiveStats for datatype={datatype}, key={key}:", flush=True)
             # print(f"dataset: {len(_dataset[datatype][key])}")
 
-            keyinfo = key.split(".")
-            # print(f"keyinfo={keyinfo}", flush=True)
-            if len(keyinfo) == 1:
-                fieldname = key
-            elif len(keyinfo) == 2:
-                (physic, fieldname) = keyinfo
-            elif len(keyinfo) == 3:
-                (toolbox, physic, fieldname) = keyinfo
-            else:
-                raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+            (toolbox, physic, fieldname) = keyinfo(key)
 
             # print(f"toolbox={toolbox}", flush=True)
             # print(f"physic={physic}", flush=True)
@@ -164,7 +155,7 @@ def resultStats(
         histo (bool, optional): compute histograms. Defaults to False.
         BinCount (int, optional): number of bins in histograms. Defaults to 10.
         show (bool, optional): show histograms. Defaults to False.
-        verbose (bool, optional): prin verbose. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
 
     Returns:
         dict: statistics dict
@@ -223,18 +214,7 @@ def resultStats(
                     Components = kdata["Components"]
                     bounds = kdata["Bounds"]
 
-                    keyinfo = key.split(".")
-                    # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 1:
-                        fieldname = key
-                    elif len(keyinfo) == 2:
-                        (physic, fieldname) = keyinfo
-                    elif len(keyinfo) == 3:
-                        (toolbox, physic, fieldname) = keyinfo
-                    else:
-                        raise RuntimeError(
-                            f"{key}: cannot get keyinfo as splitted char"
-                        )
+                    (toolbox, physic, fieldname) = keyinfo(key)
 
                     symbol = fieldunits[fieldname]["Symbol"]
                     msymbol = symbol

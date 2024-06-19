@@ -16,7 +16,7 @@ from paraview.simple import (
     ExtractBlock,
 )
 
-from ..method import selectBlocks, convert_data
+from ..method import selectBlocks, convert_data, keyinfo
 from ..view import (
     setCamera,
     makeboxclip,
@@ -208,16 +208,7 @@ def displayField(
     LUTColorBar = GetScalarBar(LUT)
     # LUTColorBar.Position = [0.9118075801749271, 0.01059135039717564]
 
-    keyinfo = field.split(".")
-    # print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -317,16 +308,7 @@ def make3Dview(
     print(flush=True)
     print(f"blockdata={blockdata}", flush=True)
 
-    keyinfo = field.split(".")
-    # print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
     excludeBlocks = False
     if fieldunits[fieldname]["Exclude"]:
         excludeBlocks = True
@@ -411,16 +393,7 @@ def makeOxOyview(
         print(f", suffix={suffix}", end="")
     print(f", z={z}", flush=True)
 
-    keyinfo = field.split(".")
-    # print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     r_units = {"coord": fieldunits["coord"]["Units"]}
@@ -512,16 +485,7 @@ def makeOrOzview(
         print(f", suffix={suffix}", end="")
     print(f", theta={theta}", flush=True)
 
-    keyinfo = field.split(".")
-    # print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
     print(f"Exclude blocks = {fieldunits[fieldname]['Exclude']}", flush=True)
 
     angle = theta + 90

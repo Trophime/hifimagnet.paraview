@@ -11,7 +11,7 @@ from paraview.simple import (
     Show,
 )
 
-from .method import convert_data, resultinfo
+from .method import convert_data, resultinfo, keyinfo
 from .histo import getresultHisto
 
 
@@ -112,17 +112,7 @@ def createStatsTable(
             # print(f"DescriptiveStats for datatype={datatype}, key={key}:", flush=True)
             # print(f"dataset: {len(_dataset[datatype][key])}", flush=True)
 
-            toolbox = ""
-            keyinfo = key.split(".")
-            print(f"keyinfo={keyinfo}", flush=True)
-            if len(keyinfo) == 1:
-                fieldname = key
-            elif len(keyinfo) == 2:
-                (physic, fieldname) = keyinfo
-            elif len(keyinfo) == 3:
-                (toolbox, physic, fieldname) = keyinfo
-            else:
-                raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+            (toolbox, physic, fieldname) = keyinfo(key)
             units = {fieldname: fieldunits[fieldname]["Units"]}
             # print(f"toolxbox={toolbox}, physic={physic}, fieldname={fieldname}", flush=True)
             # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
@@ -372,7 +362,7 @@ def resultStats(
         histo (bool, optional): compute histograms. Defaults to False.
         BinCount (int, optional): number of bins in histograms. Defaults to 10.
         show (bool, optional): show histograms. Defaults to False.
-        verbose (bool, optional): prin verbose. Defaults to False.
+        verbose (bool, optional): print verbose. Defaults to False.
 
     Returns:
         dict: statistics dict
@@ -389,18 +379,7 @@ def resultStats(
                 if not key in ignored_keys:
 
                     found = False
-                    keyinfo = key.split(".")
-                    # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 1:
-                        fieldname = key
-                    elif len(keyinfo) == 2:
-                        (physic, fieldname) = keyinfo
-                    elif len(keyinfo) == 3:
-                        (toolbox, physic, fieldname) = keyinfo
-                    else:
-                        raise RuntimeError(
-                            f"{key}: cannot get keyinfo as splitted char"
-                        )
+                    (toolbox, physic, fieldname) = keyinfo(key)
 
                     for excluded in fieldunits[fieldname]["Exclude"]:
                         if excluded in name:

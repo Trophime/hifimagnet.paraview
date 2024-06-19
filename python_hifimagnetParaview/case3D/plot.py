@@ -15,7 +15,7 @@ from paraview.simple import (
     SetActiveSource,
 )
 
-from ..method import convert_data, resultinfo, showplot, plot_greySpace
+from ..method import convert_data, resultinfo, showplot, plot_greySpace, keyinfo
 from ..view import makeclip, makecylinderslice
 
 
@@ -92,16 +92,7 @@ def plotOr(
     ):
         [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        keyinfo = key.split(".")
-        # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 1:
-            fieldname = field
-        elif len(keyinfo) == 2:
-            (physic, fieldname) = keyinfo
-        elif len(keyinfo) == 3:
-            (toolbox, physic, fieldname) = keyinfo
-        else:
-            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        (toolbox, physic, fieldname) = keyinfo(key)
         # print(f"physic={physic}, fieldname={fieldname}", flush=True)
         # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
         symbol = fieldunits[fieldname]["Symbol"]
@@ -247,16 +238,7 @@ def plotOz(
     ):
         [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        keyinfo = key.split(".")
-        # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 1:
-            fieldname = field
-        elif len(keyinfo) == 2:
-            (physic, fieldname) = keyinfo
-        elif len(keyinfo) == 3:
-            (toolbox, physic, fieldname) = keyinfo
-        else:
-            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        (toolbox, physic, fieldname) = keyinfo(key)
         symbol = fieldunits[fieldname]["Symbol"]
         msymbol = symbol
         if "mSymbol" in fieldunits[fieldname]:
@@ -419,16 +401,7 @@ def plotTheta(
     ):
         [fig, ax, legend] = axs
         print(f"plotThetaField: files={files}, key={key}", flush=True)
-        keyinfo = key.split(".")
-        # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 1:
-            fieldname = field
-        elif len(keyinfo) == 2:
-            (physic, fieldname) = keyinfo
-        elif len(keyinfo) == 3:
-            (toolbox, physic, fieldname) = keyinfo
-        else:
-            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        (toolbox, physic, fieldname) = keyinfo(key)
         symbol = fieldunits[fieldname]["Symbol"]
         msymbol = symbol
         if "mSymbol" in fieldunits[fieldname]:

@@ -12,7 +12,7 @@ from paraview.simple import (
     ExportView,
 )
 
-from .method import convert_data, resultinfo
+from .method import convert_data, resultinfo, keyinfo
 
 
 # plot with matplotlib
@@ -48,16 +48,7 @@ def plotHistoAxi(
     # print(tabulate(csv, headers="keys", tablefmt="psql"))
 
     # get key unit
-    keyinfo = key.replace("_Magnitude", "").split(".")
-    # print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = key.replace("_Magnitude", "")
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(key.replace("_Magnitude", ""))
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:

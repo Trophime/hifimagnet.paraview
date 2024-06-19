@@ -18,7 +18,7 @@ from paraview import servermanager as sm
 from paraview.vtk.numpy_interface import dataset_adapter as dsa
 from paraview.vtk.numpy_interface import algorithms as algs
 
-from .method import convert_data, info, resultinfo, momentN, integrateKeys
+from .method import convert_data, info, resultinfo, momentN, integrateKeys, keyinfo
 from .statsAxi import resultStats, createStatsTable
 from .histoAxi import resultHistos
 
@@ -461,18 +461,7 @@ def meshinfo(
         for key, value in statsdict.items():
             for array, avalue in value["Arrays"].items():
                 if "Stats" in avalue:
-                    keyinfo = array.split(".")
-                    # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 1:
-                        fieldname = array
-                    elif len(keyinfo) == 2:
-                        (physic, fieldname) = keyinfo
-                    elif len(keyinfo) == 3:
-                        (toolbox, physic, fieldname) = keyinfo
-                    else:
-                        raise RuntimeError(
-                            f"{key}: cannot get keyinfo as splitted char"
-                        )
+                    (toolbox, physic, fieldname) = keyinfo(array)
 
                     symbol = fieldunits[fieldname]["Symbol"]
                     msymbol = symbol
@@ -548,18 +537,7 @@ def meshinfo(
             for key, value in statsdict.items():
                 for array, avalue in value["Arrays"].items():
                     if "Stats" in avalue:
-                        keyinfo = array.split(".")
-                        # print(f"keyinfo={keyinfo}", flush=True)
-                        if len(keyinfo) == 1:
-                            fieldname = array
-                        elif len(keyinfo) == 2:
-                            (physic, fieldname) = keyinfo
-                        elif len(keyinfo) == 3:
-                            (toolbox, physic, fieldname) = keyinfo
-                        else:
-                            raise RuntimeError(
-                                f"{key}: cannot get keyinfo as splitted char"
-                            )
+                        (toolbox, physic, fieldname) = keyinfo(array)
 
                         symbol = fieldunits[fieldname]["Symbol"]
                         msymbol = symbol
@@ -652,18 +630,7 @@ def meshinfo(
         for key, value in statsdict.items():
             for array, avalue in value["Arrays"].items():
                 if "Stats" in avalue:
-                    keyinfo = array.split(".")
-                    # print(f"keyinfo={keyinfo}", flush=True)
-                    if len(keyinfo) == 1:
-                        fieldname = array
-                    elif len(keyinfo) == 2:
-                        (physic, fieldname) = keyinfo
-                    elif len(keyinfo) == 3:
-                        (toolbox, physic, fieldname) = keyinfo
-                    else:
-                        raise RuntimeError(
-                            f"{key}: cannot get keyinfo as splitted char"
-                        )
+                    (toolbox, physic, fieldname) = keyinfo(array)
 
                     symbol = fieldunits[fieldname]["Symbol"]
                     msymbol = symbol

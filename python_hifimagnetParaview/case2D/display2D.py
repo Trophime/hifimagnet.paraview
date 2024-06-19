@@ -16,7 +16,7 @@ from paraview.simple import (
     ExtractBlock,
 )
 
-from ..method import selectBlocks
+from ..method import selectBlocks, keyinfo
 from ..view import rangeHisto
 
 
@@ -154,16 +154,8 @@ def displayField(
     LUTColorBar = GetScalarBar(LUT)
     # LUTColorBar.Position = [0.9118075801749271, 0.01059135039717564]
 
-    keyinfo = field.split(".")
-    print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
+
     symbol = fieldunits[fieldname]["Symbol"]
     msymbol = symbol
     if "mSymbol" in fieldunits[fieldname]:
@@ -263,16 +255,7 @@ def make2Dview(
     print(flush=True)
     print(f"blockdata={blockdata}", flush=True)
 
-    keyinfo = field.split(".")
-    print(f"keyinfo={keyinfo}", flush=True)
-    if len(keyinfo) == 1:
-        fieldname = field
-    elif len(keyinfo) == 2:
-        (physic, fieldname) = keyinfo
-    elif len(keyinfo) == 3:
-        (toolbox, physic, fieldname) = keyinfo
-    else:
-        raise RuntimeError(f"{field}: cannot get keyinfo as splitted char")
+    (toolbox, physic, fieldname) = keyinfo(field)
 
     excludeBlocks = False
     if fieldunits[fieldname]["Exclude"]:

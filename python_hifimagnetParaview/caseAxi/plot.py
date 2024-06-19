@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from paraview.simple import CellDatatoPointData, PlotOverLine, CreateWriter, Delete
 
-from ..method import convert_data, resultinfo, showplot, plot_greySpace
+from ..method import convert_data, resultinfo, showplot, plot_greySpace, keyinfo
 
 
 def plotOr(
@@ -75,16 +75,7 @@ def plotOr(
     ):
         [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        keyinfo = key.replace("_Magnitude", "").split(".")
-        # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 1:
-            fieldname = field
-        elif len(keyinfo) == 2:
-            (physic, fieldname) = keyinfo
-        elif len(keyinfo) == 3:
-            (toolbox, physic, fieldname) = keyinfo
-        else:
-            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        (toolbox, physic, fieldname) = keyinfo(key.replace("_Magnitude", ""))
         # print(f"physic={physic}, fieldname={fieldname}", flush=True)
         # print(f'fieldunits[fieldname]={fieldunits[fieldname]}"', flush=True)
         symbol = fieldunits[fieldname]["Symbol"]
@@ -218,16 +209,7 @@ def plotOz(
     ):
         [fig, ax, legend] = axs
         print(f"plotOrField: file={file}, key={key}", flush=True)
-        keyinfo = key.replace("_Magnitude", "").split(".")
-        # print(f"keyinfo={keyinfo}", flush=True)
-        if len(keyinfo) == 1:
-            fieldname = field
-        elif len(keyinfo) == 2:
-            (physic, fieldname) = keyinfo
-        elif len(keyinfo) == 3:
-            (toolbox, physic, fieldname) = keyinfo
-        else:
-            raise RuntimeError(f"{key}: cannot get keyinfo as splitted char")
+        (toolbox, physic, fieldname) = keyinfo(key.replace("_Magnitude", ""))
         symbol = fieldunits[fieldname]["Symbol"]
         [in_unit, out_unit] = fieldunits[fieldname]["Units"]
 

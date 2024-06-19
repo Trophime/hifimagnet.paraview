@@ -240,9 +240,9 @@ def getresultInfo(
 def keyinfo(key: str) -> tuple:
     keyinfo = key.split(".")
     if len(keyinfo) == 1:
-        fieldname = key
         toolbox = None
         physic = None
+        fieldname = key
     elif len(keyinfo) == 2:
         toolbox = None
         (physic, fieldname) = keyinfo
