@@ -398,11 +398,12 @@ def rangeHisto(field: str, fieldname: str, fieldunits: dict, filename: str) -> t
         ".png", "-histogram-matplotlib.csv"
     )
     histfile = re.sub(r"-deformed_factor\d+", "", histfile)
-
+    histfile = re.sub(r"-OrOz-theta=\d+deg", "", histfile)
+    histfile = re.sub(r"-OxOy-z=\d+.\d+mm ", "", histfile)
     try:
         df = pd.read_csv(histfile)
     except:
-        print(f"No histogram for {field} - cannot use custom range !")
+        print(f"No histogram {histfile} - cannot use custom range !")
         return None
 
     for col in df.columns.tolist():
