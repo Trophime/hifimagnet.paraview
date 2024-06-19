@@ -48,7 +48,55 @@ Optional specific to 3D:
 * `--theta`: with "--views", create OrOz views at theta=0/30/60/90/120/150deg
 
  
-help
+## Example for Ansys files (output.vtk)
+
+Open the file with paraview
+
+```bash
+paraview output.vtk
+```
+
+Write the fields in a json with their type:
+
+.output.json
+```bash
+{
+    "S_EQV": {
+        "Type": "VonMises",
+        "Exclude": []
+    }
+}
+```
+
+Run the command with any post-processing operation :
+
+Basic command
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json
+```
+
+
+Statistics & histograms
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --stats --histos
+```
+
+Views (custom range from histograms, transparent background, deformed view)
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --views [--customRangeHisto] [--transparentBG] [--deformedfactor 5]
+```
+
+Plots
+    vs r
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --plots --r 0.2 0.34 --theta 0.0 4.21875 5.625 [--greyspace]
+```
+    vs theta
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --plots --r 0.20895
+```
+
+## help
 
 ```bash
 pvbatch -m python_hifimagnetParaview.cli --help
@@ -57,10 +105,10 @@ pvbatch -m python_hifimagnetParaview.cli 2D --help
 pvbatch -m python_hifimagnetParaview.cli Axi --help
 ```
 
-examples
+## examples
 
 ```bash
-pvbatch -m python_hifimagnetParaview.cli 3D  ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --plots --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 --save
+pvbatch -m python_hifimagnetParaview.cli 3D  ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --plots --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2
 pvbatch -m python_hifimagnetParaview.cli 2D  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --views
 pvbatch -m python_hifimagnetParaview.cli Axi  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --stats --histos --json tmp/M9Bitters_18MW-cfpdes-thmagel_hcurl-nonlinear-Axi-sim.json
 ```
@@ -106,7 +154,7 @@ examples
 ```bash
 python statistics.py --help
 python pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case
-pvbatch pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 --save
+pvbatch pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 
 ```
 
 ## `pv-statistics2D`:
