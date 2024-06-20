@@ -449,9 +449,9 @@ def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend: list[str]):
 def getcurrent(current: str, marker: str = None):
     if current.endswith(".csv"):
         df = pd.read_csv(current)
-        for col in df.columns():
+        for col, val in df.items():
             if "intensity" in col or "Intensity" in col:
-                current = f"{int(df[col].iloc[-1])}A"
+                current = f"{abs(int(val[0]))}A"
                 break
     else:
         current += "A"
@@ -462,8 +462,6 @@ def getcurrent(current: str, marker: str = None):
 def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -> float:
     B0 = None
     for f in fieldtype:
-        print(f)
-        print(fieldtype[f]["Type"])
         if fieldtype[f]["Type"] == "MagneticField":
             B0 = f
             break
