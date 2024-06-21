@@ -2,6 +2,130 @@
 
 This directory contains scripts useful for post-processing feelpp results with Paraview
 
+## `python_hifimagnetParaview.cli`:
+
+* get range per PointData, CellData
+* compute stats per PointData, CellData for insert
+* compute histogram per PointData, CellData for insert
+* display 3D/2D/Axi view
+* display 2D OrOz view for theta in 
+
+All data file are saved in csv format for other use.
+
+Required
+* `dimmension`: choose between 3D, 2D or Axi
+* `file`: input case file (ex. Export.case)
+
+Optional
+* `--json`: 
+    * give `feelpp` json file to detect exported fields
+* `--views`: 
+    * create views per PointData, CellData and save them to png
+    * `--field`: select a field, by default get all fields
+    * `--transparentBG`: enable transparent background on views
+    * `--customRangeHisto`: enable custom range in views, recovered from histograms
+    * `--deformedfactor`: select a deformation factor, by default 1
+* `--stats`: 
+    * compute stats per PointData, CellData per block (aka `feelpp` marker) 
+* `--histos`: 
+    * compute histogram per PointData, CellData per insert
+    * `--bins`: select number of bins in histograms, by default 20
+* `--plots`: 
+    * create plots per PointData, CellData using given coordinates :
+    * `--z`: 
+    * `--theta`: 
+    * `--r`: 
+    * `--plotmarker`: choose marker for plots calculations
+    * `--greyspace`: plot grey bar for holes (channels/slits) in plot 
+    * `--show`: show plots
+
+Optional specific to 2D:
+* `--cliptheta`: select an angle to clip the geometry
+
+Optional specific to 3D:
+* `--channels`: enable creation of stl files for test-meshlib.py
+* `--z`: with "--views", create a OxOy view at z
+* `--theta`: with "--views", create OrOz views at theta=0/30/60/90/120/150deg
+
+ 
+## Example for Ansys files (output.vtk)
+
+Open the file with paraview
+
+```bash
+paraview output.vtk
+```
+
+Write the fields in a json with their type:
+
+.output.json
+```bash
+{
+    "S_EQV": {
+        "Type": "VonMises",
+        "Exclude": []
+    }
+}
+```
+
+Run the command with any post-processing operation :
+
+Basic command
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json
+```
+
+
+Statistics & histograms
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --stats --histos
+```
+
+Views (custom range from histograms, transparent background, deformed view)
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --views [--customRangeHisto] [--transparentBG] [--deformedfactor 5]
+```
+
+Plots
+    vs r
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --plots --r 0.2 0.34 --theta 0.0 4.21875 5.625 [--greyspace]
+```
+    vs theta
+```bash
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/ansys.exports/output.vtk --json tmp/output.json --plots --r 0.20895
+```
+
+## help
+
+```bash
+pvbatch -m python_hifimagnetParaview.cli --help
+pvbatch -m python_hifimagnetParaview.cli 3D --help
+pvbatch -m python_hifimagnetParaview.cli 2D --help
+pvbatch -m python_hifimagnetParaview.cli Axi --help
+```
+
+## examples
+
+```bash
+pvbatch -m python_hifimagnetParaview.cli 3D  ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --plots --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2
+pvbatch -m python_hifimagnetParaview.cli 2D  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --views
+pvbatch -m python_hifimagnetParaview.cli Axi  tmp/cfpdes-thmagel_hcurl-Axi-static-nonlinear/M9Bitters_18MW_laplace/gradH/Montgomery/Colebrook/np_16/cfpdes.exports/Export.case --stats --histos --json tmp/M9Bitters_18MW-cfpdes-thmagel_hcurl-nonlinear-Axi-sim.json
+```
+
+## running testsuite
+
+Use paraview.simple for Python 3.10
+```bash
+export PYTHONPATH=/opt/paraview/lib/python3.10/site-packages/
+```
+
+To run tests located in test/
+```bash
+pytest
+```
+
+
 ## `pv-statistics`:
 
 * get range per PointData, CellData
@@ -30,7 +154,7 @@ examples
 ```bash
 python statistics.py --help
 python pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/thermo-electric.exports/Export.case
-pvbatch pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 --save
+pvbatch pv-statistics.py ../../HL-31/test/hybride-Bh27.7T-Bb9.15T-Bs9.05T_HPfixed_BPfree/bmap/np_32/elasticity.exports/Export.case --z -0.15 -0.1 -0.05 0 0.05 0.1 0.15  --r 1.94e-2 2.52e-2 3.17e-2 
 ```
 
 ## `pv-statistics2D`:

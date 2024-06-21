@@ -37,6 +37,10 @@ RUN apt update \
     && apt install -y lsb-release wget curl sudo bash-completion openssh-client git git-lfs \
     && lsb_release -cs
 
+# Install latest gmsh dev version (support for BoundingBox) ?
+RUN apt-get -y install libglu1-mesa libfltk-gl1.3 && \
+    apt-get -y install python3-virtualenv
+
 # install paraview headless
 ARG PV_URL=https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v${PV_VERSION_MAJOR}&type=binary&os=Linux&downloadFile=ParaView-${PV_VERSION}-${PV_FLAVOR}-Linux-Python${PYVER}-${ARCH}.tar.gz
 # https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.12&type=binary&os=Linux&downloadFile=ParaView-5.12.0-egl-MPI-Linux-Python3.10-x86_64.tar.gz

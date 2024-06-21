@@ -49,5 +49,8 @@
 		}
 	},
 	// Comment out the next line if you want to run as root instead
-	"remoteUser": "feelpp"
+	"remoteUser": "feelpp",
+	"postCreateCommand": "python3 -m venv --system-site-packages paraview-env",
+	"postCreateCommand": "source ./paraview-env/bin/activate",
+	"postCreateCommand": "pip install -r /workspaces/hifimagnet.paraview/requirements.txt"
 }
