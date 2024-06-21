@@ -418,8 +418,15 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "B0": {
             "Val": None,
             "Units": [
-                ureg.teslas,
-                ureg.teslas,
+                ureg.tesla,
+                ureg.tesla,
+            ],
+        },
+        "Bbg": {
+            "Val": None,
+            "Units": [
+                ureg.tesla,
+                ureg.tesla,
             ],
         },
     }
@@ -448,6 +455,7 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "coord",
         "Current",
         "B0",
+        "Bbg",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:

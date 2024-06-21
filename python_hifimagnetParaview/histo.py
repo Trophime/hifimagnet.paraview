@@ -78,6 +78,8 @@ def plotHisto(
         title = title + f"\nI={fieldunits['Current']['Val']}"
     if fieldunits["B0"]["Val"]:
         title = title + f"\nB0={fieldunits['B0']['Val']}T"
+    if fieldunits["Bbg"]["Val"]:
+        title = title + f"\nBackground field: {fieldunits['Bbg']['Val']}"
     csv.plot.bar(
         x="bin_extents",
         y=f"{grandeur}_total",

@@ -537,6 +537,8 @@ def makeplot(
             title = title + f"\nI={fieldunits['Current']['Val']}"
         if fieldunits["B0"]["Val"]:
             title = title + f"\nB0={fieldunits['B0']['Val']}T"
+        if fieldunits["Bbg"]["Val"]:
+            title = title + f"\nBackground field: {fieldunits['Bbg']['Val']}"
         for r in args.r:
             figaxs = {}
             for z in args.z:

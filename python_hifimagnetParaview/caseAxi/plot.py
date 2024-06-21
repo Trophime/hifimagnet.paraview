@@ -293,6 +293,8 @@ def makeplot(
             title = title + f"\nI={fieldunits['Current']['Val']}"
         if fieldunits["B0"]["Val"]:
             title = title + f"\nB0={fieldunits['B0']['Val']}T"
+        if fieldunits["Bbg"]["Val"]:
+            title = title + f"\nBackground field: {fieldunits['Bbg']['Val']}"
         print(f"plots: r={args.r}, z={args.z}", flush=True)
         if len(args.r) == 2:
             figaxs = {}  # create dict for fig and ax

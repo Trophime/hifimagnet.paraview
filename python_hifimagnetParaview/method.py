@@ -490,6 +490,7 @@ def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -
                 CellDataArrays=[key],
             )
             savedkey = key
+            break
         if B0 == fieldname and key in list(probeLocation.PointData.keys()):
             SaveData(
                 f"{basedir}/insert-B0.csv",
@@ -498,6 +499,7 @@ def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -
                 PointDataArrays=[key],
             )
             savedkey = key
+            break
 
     try:
         df = pd.read_csv(f"{basedir}/insert-B0.csv")

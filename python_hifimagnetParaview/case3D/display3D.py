@@ -329,6 +329,8 @@ def make3Dview(
         comm = f'I={fieldunits["Current"]["Val"]}'
     if fieldunits["B0"]["Val"]:
         comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
+    if fieldunits["Bbg"]["Val"]:
+        comm = comm + f'\nBackground field: {fieldunits["Bbg"]["Val"]}'
     # position is None
     renderView = displayField(
         boxclip,
@@ -414,6 +416,8 @@ def makeOxOyview(
         comm = f'\nI={fieldunits["Current"]["Val"]}'
     if fieldunits["B0"]["Val"]:
         comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
+    if fieldunits["Bbg"]["Val"]:
+        comm = comm + f'\nBackground field: {fieldunits["Bbg"]["Val"]}'
     # position is None
     renderView = displayField(
         slice,
@@ -512,6 +516,8 @@ def makeOrOzview(
         comm = f'\nI={fieldunits["Current"]["Val"]}'
     if fieldunits["B0"]["Val"]:
         comm = comm + f'\nB0={fieldunits["B0"]["Val"]}T'
+    if fieldunits["Bbg"]["Val"]:
+        comm = comm + f'\nBackground field: {fieldunits["Bbg"]["Val"]}'
     # position is None
     renderView = displayField(
         slice,

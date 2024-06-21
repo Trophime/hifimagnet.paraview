@@ -49,9 +49,6 @@ def options(description: str, epilog: str):
             "--json", type=str, help="input json file for fieldunits", default=None
         )
         allparsers.add_argument(
-            "--current", type=str, help="input current value or csv", default=None
-        )
-        allparsers.add_argument(
             "--views", help="activate views calculations", action="store_true"
         )
         allparsers.add_argument(
@@ -125,6 +122,16 @@ def options(description: str, epilog: str):
             "--verbose",
             help="activate verbose mode",
             action="store_true",
+        )
+
+        allparsers.add_argument(
+            "--current", type=str, help="input current value or csv", default=None
+        )
+        allparsers.add_argument(
+            "--B0", type=float, help="input total Magnetic Field", default=None
+        )
+        allparsers.add_argument(
+            "--Bbg", type=str, help="input background field", default=None
         )
 
     return parser
@@ -229,10 +236,18 @@ def main():
     if args.current:
         fieldunits["Current"]["Val"] = getcurrent(args.current)
 
-    B0 = getB0(reader, fieldtype, basedir, dim, axis)
+    B0 = args.B0
+    if not B0:
+        B0 = getB0(reader, fieldtype, basedir, dim, axis)
+
     if B0:
         print(f"B0={B0}T")
         fieldunits["B0"]["Val"] = B0
+
+    Bbg = args.Bbg
+    if Bbg:
+        print(f"Background Field: {Bbg}")
+        fieldunits["Bbg"]["Val"] = Bbg
 
     if args.field:
         if args.field in list(reader.CellData.keys()):

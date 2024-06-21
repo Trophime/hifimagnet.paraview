@@ -399,7 +399,7 @@ def rangeHisto(field: str, fieldname: str, fieldunits: dict, filename: str) -> t
     )
     histfile = re.sub(r"-deformed_factor\d+", "", histfile)
     histfile = re.sub(r"-OrOz-theta=\d+deg", "", histfile)
-    histfile = re.sub(r"-OxOy-z=\d+.\d+mm ", "", histfile)
+    histfile = re.sub(r"-OxOy-z=\d+.\d+mm", "", histfile)
     try:
         df = pd.read_csv(histfile)
     except:
