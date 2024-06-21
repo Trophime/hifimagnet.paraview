@@ -477,9 +477,14 @@ def meshinfo(
                     M[4] = icsv[f"{array}_moment4"].to_list()[0]
                     avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
 
-                    avalue["Stats"]["Standard Deviation"] = convert_data(
-                        units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
-                    )
+                    if units[fieldname][0] != ureg.kelvin:
+                        avalue["Stats"]["Standard Deviation"] = convert_data(
+                            units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                        )
+                    else:
+                        avalue["Stats"]["Standard Deviation"] = sqrt(
+                            abs(M[1] * M[1] - M[2])
+                        )
 
                     for order in range(2, 5):
                         units = {f"M{order}": fieldunits[fieldname]["Units"]}
@@ -553,9 +558,14 @@ def meshinfo(
                         M[4] = icsv[f"{array}_moment4"].to_list()[0]
                         avalue["Stats"]["Mean"] = convert_data(units, M[1], fieldname)
 
-                        avalue["Stats"]["Standard Deviation"] = convert_data(
-                            units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
-                        )
+                        if units[fieldname][0] != ureg.kelvin:
+                            avalue["Stats"]["Standard Deviation"] = convert_data(
+                                units, sqrt(abs(M[1] * M[1] - M[2])), fieldname
+                            )
+                        else:
+                            avalue["Stats"]["Standard Deviation"] = sqrt(
+                                abs(M[1] * M[1] - M[2])
+                            )
 
                         for order in range(2, 5):
                             units = {f"M{order}": fieldunits[fieldname]["Units"]}
