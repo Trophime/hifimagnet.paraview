@@ -446,7 +446,16 @@ def plot_greySpace(df: pd.DataFrame, cx: str, cy: str, ax, legend: list[str]):
     return legend
 
 
-def getcurrent(current: str, marker: str = None):
+def getcurrent(current: str, marker: str = None) -> str:
+    """get current for comments (str or from csv)
+
+    Args:
+        current (str): current or export measure csv
+        marker (str, optional): find current for specific marker. Defaults to None.
+
+    Returns:
+        str: current comment
+    """
     if current.endswith(".csv"):
         df = pd.read_csv(current)
         for col, val in df.items():
@@ -460,6 +469,18 @@ def getcurrent(current: str, marker: str = None):
 
 
 def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -> float:
+    """get B0 for comments
+
+    Args:
+        reader: paraview reader
+        fieldtype (dict): dictionnary of type of exported fields
+        basedir (str): result directory
+        dim (int): geometry dimmension
+        axis (bool, optional): True if geometry is axis. Defaults to False.
+
+    Returns:
+        float: B0
+    """
     B0 = None
     for f in fieldtype:
         if fieldtype[f]["Type"] == "MagneticField":
@@ -484,7 +505,7 @@ def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -
         (toolbox, physic, fieldname) = keyinfo(key)
         if B0 == fieldname and key in list(probeLocation.CellData.keys()):
             SaveData(
-                f"{basedir}insert-B0.csv",
+                f"{basedir}/insert-B0.csv",
                 proxy=probeLocation,
                 ChooseArraysToWrite=1,
                 CellDataArrays=[key],
@@ -510,6 +531,8 @@ def getB0(reader, fieldtype: dict, basedir: str, dim: int, axis: bool = False) -
             B0 = abs(df[f"{savedkey}:1"].iloc[-1])
         elif dim == 3:
             B0 = abs(df[f"{savedkey}:2"].iloc[-1])
+
+        os.remove(f"{basedir}/insert-B0.csv")
         return round(B0, 1)
     except:
         return None
