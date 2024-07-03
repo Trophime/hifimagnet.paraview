@@ -112,6 +112,7 @@ def plotOr(
 
         ax.set_xlabel("r [m]", fontsize=18)
         ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
+        keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-z={z_mm}mm.csv")
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
         return legend

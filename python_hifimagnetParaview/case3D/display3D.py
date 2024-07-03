@@ -234,7 +234,7 @@ def displayField(
     LUTColorBar.TitleFontSize = 30
     LUTColorBar.HorizontalTitle = 1
     # LUTColorBar.LabelFontFamily = 'Courier'
-    LUTColorBar.LabelBold = 1
+    # LUTColorBar.LabelBold = 1
     # LUTColorBar.LabelItalic = 1
     # LUTColorBar.LabelShadow = 1
     LUTColorBar.LabelFontSize = 30

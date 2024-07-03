@@ -134,7 +134,7 @@ def plotOr(
         if greyspace:
             legend = plot_greySpace(keycsv, "r", key, ax, legend)
 
-        keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}-z={z_mm}{mm}.csv")
+        keycsv.to_csv(f"{basedir}/plots/{key}-vs-r-theta={theta}deg-z={z_mm}{mm}.csv")
         return legend
 
     # requirements: create PointData from CellData
@@ -275,7 +275,7 @@ def plotOz(
         mm = f'{fieldunits["coord"]["Units"][1]:~P}'
         r_mm = convert_data(r_units, r, "coord")
 
-        keycsv.to_csv(f"{basedir}/plots/{key}-vs-z-theta={theta}-r={r_mm}{mm}.csv")
+        keycsv.to_csv(f"{basedir}/plots/{key}-vs-z-theta={theta}deg-r={r_mm}{mm}.csv")
         return legend
 
     # requirements: create PointData from CellData
