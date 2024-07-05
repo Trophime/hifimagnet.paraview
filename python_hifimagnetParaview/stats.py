@@ -166,12 +166,12 @@ def createStatsTable(
                 # print(f"{column}:", flush=True)
                 # print(f"values={values}", flush=True)
                 if (
-                    column != "Standard Deviation"
-                    and units[fieldname][0] != ureg.kelvin
+                    column == "Standard Deviation"
+                    and units[fieldname][0] == ureg.kelvin
                 ):
-                    out_values = convert_data(units, values, fieldname)
-                else:
                     out_values = values
+                else:
+                    out_values = convert_data(units, values, fieldname)
                 # print(f"out_values={out_values}", flush=True)
                 # print(
                 #     f"format out_values={[f'{val:.2f}' for val in out_values]}",
