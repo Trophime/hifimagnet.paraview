@@ -452,6 +452,8 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Cos",
         "Sin",
         "cfpdes.pid",
+        "thermo_electric.pid",
+        "pid",
         "coord",
         "Current",
         "B0",

@@ -372,9 +372,12 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Cos",
         "Sin",
         "cfpdes.pid",
+        "pid",
         "Current",
         "B0",
         "Bbg",
+        "sigma0",
+        "k0",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:

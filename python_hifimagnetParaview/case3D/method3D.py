@@ -702,6 +702,8 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Current",
         "B0",
         "Bbg",
+        "thermo_electric.pid",
+        "pid",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:
