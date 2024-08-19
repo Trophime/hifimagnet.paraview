@@ -62,9 +62,10 @@ def jsonFeel_to_fieldDict(data: dict, PostProcess: dict, dictType: dict) -> dict
     exportcfpdes = json_get(PostProcess, "cfpdes", "Exports")
     exportsolid = json_get(PostProcess, "solid", "Exports")
     exportthelec = json_get(PostProcess, "thermo-electric", "Exports")
+    exportCG = json_get(PostProcess, "thermoelectric", "Exports")
     exportmaxwell = json_get(PostProcess, "maxwell", "Exports")
 
-    exports = [exportcfpdes, exportsolid, exportthelec, exportmaxwell]
+    exports = [exportcfpdes, exportsolid, exportthelec, exportmaxwell, exportCG]
     exports = [x for x in exports if x is not None]
 
     allmarkers = get_materials_markers(data["Materials"])
@@ -80,7 +81,10 @@ def jsonFeel_to_fieldDict(data: dict, PostProcess: dict, dictType: dict) -> dict
                             data, "Models", m, "common", "setup", "unknown", "name"
                         )
                         if field:
-                            dict[field] = {"Type": dictType[field], "Exclude": []}
+                            dict[field.replace("-", "_")] = {
+                                "Type": dictType[field],
+                                "Exclude": [],
+                            }
 
                 elif f not in ["pid", "tresca", "material-properties"]:
                     field = (
@@ -89,7 +93,10 @@ def jsonFeel_to_fieldDict(data: dict, PostProcess: dict, dictType: dict) -> dict
                         .replace("magnetic.", "")
                         .replace("electric.", "")
                     )
-                    dict[field] = {"Type": dictType[field], "Exclude": []}
+                    dict[field.replace("-", "_")] = {
+                        "Type": dictType[field],
+                        "Exclude": [],
+                    }
 
         if "expr" in export:
             for f in export["expr"]:

@@ -1,6 +1,8 @@
 {
     "k": "ThermalConductivity",
+    "k0": "ThermalConductivity",
     "sigma": "ElectricConductivity",
+    "sigma0": "ElectricConductivity",
     "B": "MagneticField",
     "Bz": "MagneticField",
     "magnetic_field": "MagneticField",
@@ -16,6 +18,7 @@
     "Ex": "ElectricField",
     "Ey": "ElectricField",
     "Ez": "ElectricField",
+    "electric-field": "ElectricField",
     "J": "CurrentDensity",
     "current_density": "CurrentDensity",
     "current-density": "CurrentDensity",
