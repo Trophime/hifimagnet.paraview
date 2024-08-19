@@ -134,20 +134,23 @@ if args.deformed:
     df = pd.DataFrame.from_dict(
         {
             "Name": index,
-            "Original [mm]": original,
-            "Deformed [mm]": deformed,
-            "Expand [%]": expand,
+            "Original [mm]": [f"{val:.3f}" for val in original],
+            "Deformed [mm]": [f"{val:.3f}" for val in deformed],
+            "Expand [%]": [f"{val:.3f}" for val in expand],
         }
     )
 
     if rfiles:
-        df["rOriginal [mm]"] = roriginal
-        df["rDeformed [mm]"] = rdeformed
-        df["rExpand [%]"] = rexpand
+        df["rOriginal [mm]"] = [f"{val:.3f}" for val in roriginal]
+        df["rDeformed [mm]"] = [f"{val:.3f}" for val in rdeformed]
+        df["rExpand [%]"] = [f"{val:.3f}" for val in rexpand]
 
 
 else:
-    df = pd.DataFrame.from_dict({"Name": index, "Original [mm]": original})
+    df = pd.DataFrame.from_dict(
+        {"Name": index, "Original [mm]": [f"{val:.3f}" for val in original]}
+    )
 
 df.sort_values(by="Name", key=natsort_keygen())
 print(tabulate(df, headers="keys", tablefmt="psql", showindex=False))
+df.to_csv("Channels-meshlib.csv")
