@@ -21,6 +21,7 @@ from paraview.vtk.numpy_interface import algorithms as algs
 from .method import convert_data, info, resultinfo, momentN, integrateKeys, keyinfo
 from .statsAxi import resultStats, createStatsTable
 from .histoAxi import resultHistos
+from .meshinfo import createVectorNorm
 
 
 def part_integrate(
@@ -306,10 +307,29 @@ def meshinfo(
                 tmp, field.Name, field.Name, "Cell Data"
             )
     """
+    cellDatatoPointData1 = CellDatatoPointData(
+        registrationName="CellDatatoPointData", Input=input
+    )
+
+    # for vector
+    print("Add Norm for vectors and RectToCyl:", flush=True)
+    calculator = cellDatatoPointData1
+
+    for field in cellDatatoPointData1.PointData:
+        if (dim == 2 and field.GetNumberOfComponents() > 1) or (
+            field.GetNumberOfComponents() == dim
+        ):
+            print(
+                f"create {field.Name}norm for {field.Name} PointData vector",
+                flush=True,
+            )
+            calculator = createVectorNorm(
+                calculator, field.Name, field.Name, "Point Data"
+            )
 
     # PointData to CellData
     pointDatatoCellData = PointDatatoCellData(
-        registrationName="PointDatatoCellData", Input=input
+        registrationName="PointDatatoCellData", Input=calculator
     )
 
     print("Get mesh size", flush=True)

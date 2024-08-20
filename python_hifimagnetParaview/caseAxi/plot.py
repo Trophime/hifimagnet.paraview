@@ -302,7 +302,7 @@ def makeplot(
             for z in args.z:
                 # add plot for each z to dict
                 figaxs = plotOr(
-                    reader,
+                    cellsize,
                     args.r,
                     z,
                     fieldunits,
