@@ -112,6 +112,9 @@ def makethetaclip(input, theta: float, invert: bool = True, printed: bool = True
     clip.ClipType.Origin = [0.0, 0.0, 0.0]
     clip.ClipType.Normal = [-np.sin(radian), np.cos(radian), 0.0]
 
+    print(
+        f"clip.ClipType.Normal = [{-np.sin(radian)}, {np.cos(radian)}, 0.0]", flush=True
+    )
     clip.Invert = 1
     if invert:
         clip.Invert = 0
