@@ -100,8 +100,6 @@ def key_dataframe(dirs: list[str]) -> pd.DataFrame:
         key3 = []
         for key, value in data3.items():
             if value["Type"] in types1.keys():
-                # types.append(value["Type"])
-                # key1.append(types1[value["Type"]])
                 key3.append(key)
         dfkeys["key3"] = key3
 
@@ -385,10 +383,12 @@ def main():
             ## if one of the result compared in 3D or 2D, make boxplot given r for theta
             if geos[0] in ["3D", "2D"]:
                 geotheta = geos[0]
+                nametheta = names[0]
                 dirtheta = dirs[0]
                 keytheta = "key1"
             elif geos[1] in ["3D", "2D"]:
                 geotheta = geos[1]
+                nametheta = names[1]
                 dirtheta = dirs[1]
                 keytheta = "key2"
 
@@ -398,16 +398,17 @@ def main():
                 )
 
                 if filestheta and row["types"] in files:
-                    files[row["types"]][geotheta] = filestheta
+                    files[row["types"]][nametheta] = filestheta
 
             for index, values in files.items():
                 fig, ax = plt.subplots(figsize=(12, 8))
                 legend = []
                 print(f"    plot {index}-vs-r w/ Boxplot-vs-theta", flush=True)
                 for i, v in values.items():
-                    if i in ["3D", "2D"]:
+                    if args.mdata[i]["geo"] in ["3D", "2D"]:
                         for file in v:
                             df = pd.read_csv(file, index_col=0)
+                            print(f"        file: {file.split('/')[-1]}")
                             r = float(file.split("r=")[-1].split("mm-z=")[0])
                             measure = file.split("/")[-1].split("-vs-theta")[0]
                             df["r"] = [r] * len(df[measure])
@@ -439,6 +440,7 @@ def main():
                     else:
                         for file in v:
                             df = pd.read_csv(file, index_col=0)
+                            print(f"        file: {file.split('/')[-1]}")
                             df.plot(
                                 x=df.columns[0], y=df.columns[1], linewidth=3, ax=ax
                             )
@@ -509,9 +511,12 @@ def main():
 
                 ## merge the images
                 for file1 in files1:
+                    # print(f"        file1: {file1.split('/')[-1]}")
                     for file2 in files2:
+                        # print(f"            file2: {file2.split('/')[-1]}")
                         if len(dirs) == 3:
                             for file3 in files3:
+                                print(f"                file3: {file3.split('/')[-1]}")
                                 savefile = f"{basedir}/views/{name}{cooling}-{row['types']}-{file1.split('/')[-1].replace('.png','')}-{file2.split('/')[-1].replace('.png','')}-{file3.split('/')[-1].replace('.png','')}.png"
                                 merge_images([file1, file2, file3], savefile)
                         else:
