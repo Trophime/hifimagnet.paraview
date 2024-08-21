@@ -253,6 +253,53 @@ def part(
     return vol, statsdict
 
 
+def cylField(input, key: str, nkey: str, AttributeType: str):
+    """compute r and theta component of a vector Field
+
+    vr = ux
+    vz = uy
+
+
+    ux: "thermo_electric.electric.current_density_X"
+
+    Args:
+        input: paraview reader
+        key (str): field name
+        nkey (str): _description_
+        AttributeType (str): 'Point Data'
+
+    Raises:
+        RuntimeError: cylField: key - unsupported AttributeType
+
+    Returns:
+        cylindric paraview reader
+    """
+
+    if AttributeType != "Point Data":
+        raise RuntimeError(
+            f"cylField: {key} - unsupported AttributeType: {AttributeType}"
+        )
+    inputDataPoint = [field.Name for field in input.PointData]
+    print(
+        f"cylField: input PointData = {inputDataPoint}",
+        flush=True,
+    )
+
+    calculator2 = Calculator(Input=input)
+    calculator2.AttributeType = AttributeType  # 'Cell Data'
+    calculator2.ResultArrayName = f"{key}_r"
+    calculator2.Function = f'"{key}_X"'
+    calculator2.UpdatePipeline()
+
+    calculator3 = Calculator(Input=calculator2)
+    calculator3.AttributeType = AttributeType  # 'Cell Data'
+    calculator3.ResultArrayName = f"{key}_z"
+    calculator3.Function = f'"{key}_Y"'
+
+    calculator3.UpdatePipeline()
+    return calculator3
+
+
 def meshinfo(
     input,
     dim: int,
@@ -326,6 +373,12 @@ def meshinfo(
             calculator = createVectorNorm(
                 calculator, field.Name, field.Name, "Point Data"
             )
+
+            print(
+                f"create {field.Name}_r and {field.Name}_z for {field.Name} PointData vector",
+                flush=True,
+            )
+            calculator = cylField(calculator, field.Name, field.Name, "Point Data")
 
     # PointData to CellData
     pointDatatoCellData = PointDatatoCellData(
