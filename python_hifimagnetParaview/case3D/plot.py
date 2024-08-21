@@ -552,6 +552,20 @@ def makeplot(
                     marker=args.plotsMarker,
                     axs=figaxs,
                 )
+
+            if args.field:
+                print(f"\nSaving field = { args.field}...")
+                figaxs_ = {
+                    key: figaxs[key] for key in figaxs if key.startswith(args.field)
+                }
+
+                if not figaxs_:
+                    raise RuntimeError(
+                        f"plot: {args.field} - not found in available fields: {list(figaxs.keys())}"
+                    )
+
+                figaxs = figaxs_
+
             showplot(
                 figaxs,
                 f"-vs-theta-r={r}m",
@@ -575,6 +589,20 @@ def makeplot(
                         marker=args.plotsMarker,
                         axs=figaxs,
                     )  # with r: float, z=[z1,z2]
+
+                if args.field:
+                    print(f"\nSaving field = { args.field}...")
+                    figaxs_ = {
+                        key: figaxs[key] for key in figaxs if key.startswith(args.field)
+                    }
+
+                    if not figaxs_:
+                        raise RuntimeError(
+                            f"plot: {args.field} - not found in available fields: {list(figaxs.keys())}"
+                        )
+
+                    figaxs = figaxs_
+
                 showplot(
                     figaxs,
                     f"-vs-z-r={r}m",
@@ -599,6 +627,20 @@ def makeplot(
                         axs=figaxs,
                         greyspace=args.greyspace,
                     )  # with r=[r1, r2], z: float
+
+                if args.field:
+                    print(f"\nSaving field = { args.field}...")
+                    figaxs_ = {
+                        key: figaxs[key] for key in figaxs if key.startswith(args.field)
+                    }
+
+                    if not figaxs_:
+                        raise RuntimeError(
+                            f"plot: {args.field} - not found in available fields: {list(figaxs.keys())}"
+                        )
+
+                    figaxs = figaxs_
+
                 showplot(
                     figaxs,
                     f"-vs-r-theta={theta}deg",
