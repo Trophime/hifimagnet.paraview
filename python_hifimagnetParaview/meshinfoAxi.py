@@ -279,11 +279,11 @@ def cylField(input, key: str, nkey: str, AttributeType: str):
         raise RuntimeError(
             f"cylField: {key} - unsupported AttributeType: {AttributeType}"
         )
-    inputDataPoint = [field.Name for field in input.PointData]
-    print(
-        f"cylField: input PointData = {inputDataPoint}",
-        flush=True,
-    )
+    # inputDataPoint = [field.Name for field in input.PointData]
+    # print(
+    #     f"cylField: input PointData = {inputDataPoint}",
+    #     flush=True,
+    # )
 
     calculator2 = Calculator(Input=input)
     calculator2.AttributeType = AttributeType  # 'Cell Data'
@@ -359,7 +359,7 @@ def meshinfo(
     )
 
     # for vector
-    print("Add Norm for vectors and RectToCyl:", flush=True)
+    print("Add Norm for vectors and CylFields:", flush=True)
     calculator = cellDatatoPointData1
 
     for field in cellDatatoPointData1.PointData:

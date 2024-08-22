@@ -306,7 +306,6 @@ def make3Dview(
     if suffix:
         print(f", suffix={suffix}", end="")
     print(flush=True)
-    print(f"blockdata={blockdata}", flush=True)
 
     (toolbox, physic, fieldname) = keyinfo(field)
     excludeBlocks = False

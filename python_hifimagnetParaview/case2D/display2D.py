@@ -255,7 +255,6 @@ def make2Dview(
     if suffix:
         print(f", suffix={suffix}", end="")
     print(flush=True)
-    print(f"blockdata={blockdata}", flush=True)
 
     (toolbox, physic, fieldname) = keyinfo(field)
 
@@ -267,7 +266,6 @@ def make2Dview(
     selectedblocks = selectBlocks(
         list(blockdata.keys()), fieldunits[fieldname]["Exclude"]
     )
-    print(list(blockdata.keys()))
     if selectedblocks:
         print(f"input.Selectors = {selectedblocks}", flush=True)
 
