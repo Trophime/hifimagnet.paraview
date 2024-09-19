@@ -126,7 +126,9 @@ def displayField(
 
     if input.GetDataInformation().DataInformation.GetNumberOfUniqueBlockTypes() == 0:
         excludeBlocks = False
+        print("only one block: excludeBlocks= False", flush=True)
     if excludeBlocks:
+        print(f"Extract block: {selectedblocks}", flush=True)
         extractBlock1 = ExtractBlock(registrationName="insert", Input=input)
         extractBlock1.Selectors = selectedblocks
         extractBlock1.UpdatePipeline()
@@ -253,7 +255,6 @@ def make2Dview(
     if suffix:
         print(f", suffix={suffix}", end="")
     print(flush=True)
-    print(f"blockdata={blockdata}", flush=True)
 
     (toolbox, physic, fieldname) = keyinfo(field)
 

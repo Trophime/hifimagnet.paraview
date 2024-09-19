@@ -100,12 +100,10 @@ def key_dataframe(dirs: list[str]) -> pd.DataFrame:
         key3 = []
         for key, value in data3.items():
             if value["Type"] in types1.keys():
-                # types.append(value["Type"])
-                # key1.append(types1[value["Type"]])
                 key3.append(key)
         dfkeys["key3"] = key3
 
-    excluded = ["Stress", "ElectricPotential"]
+    excluded = ["Stress", "Strain"]
     for type in excluded:
         dfkeys = dfkeys[dfkeys["types"] != type]
     print(dfkeys, flush=True)
@@ -169,6 +167,8 @@ def set_ax(
     """
     ax.set_xlabel(xlabel, fontsize=18)
     ax.set_ylabel(ylabel, fontsize=18)
+    if "Temperature" in ylabel and ax.get_ylim()[0] < 0:
+        ax.set_ylim(bottom=0)
     ax.legend(legend, fontsize=18, loc="best")
     ax.set_title(
         title,
@@ -202,8 +202,8 @@ def filter_files(
     if exclude_terms:
         files = [x for x in files if all(term not in x for term in exclude_terms)]
     if len(files) != 1:
-        filetemp = [x for x in files if unique_term in x]
-        if filetemp:
+        filetemp = [x for x in files if unique_term in x.split("/")[-1]]
+        if filetemp or unique_term != "norm":
             files = filetemp
     if include_term:
         files = [x for x in files if include_term in x]
@@ -274,6 +274,7 @@ def main():
         "ElectricPotential": "[V]",
         "ElectricField": "[V/m]",
         "ElectricConductivity": "[S/mm]",
+        "ForceLaplace": "[N/mm³]",
         "Q": "[W/mm³]",
         "CurrentDensity": "[A/mm²]",
         "VonMises": "[MPa]",
@@ -281,6 +282,7 @@ def main():
         "Strain": "[]",
         "HoopStress": "[MPa]",
         "HoopStrain": "[]",
+        "Stress_T": "[MPa]",
     }
 
     basedir = "res_compare"
@@ -326,6 +328,24 @@ def main():
             files2 = get_files_list("plots", dirs[1], row["key2"], need)
             if len(dirs) == 3:
                 files3 = get_files_list("plots", dirs[2], row["key3"], need)
+
+            if len(files1) > 1 and len(files2) > 1:
+                for suffix in ["_r", "_t", "_z", "_ur", "_ut"]:
+                    files1_ = filter_files(files1, unique_term=suffix)
+                    files2_ = filter_files(files2, unique_term=suffix)
+
+                    if files1_ and files2_:
+                        files[f'{row["types"]}{suffix}'] = {
+                            names[0]: files1_,
+                            names[1]: files2_,
+                        }
+
+            ## Ensure the "norm" filter is applied if length of files is not 1 (i.e. multiple files for 1 measure)
+            files1 = filter_files(files1)
+            files2 = filter_files(files2)
+            if len(dirs) == 3:
+                files3 = filter_files(files3)
+
             if files1 and files2:
                 files[row["types"]] = {names[0]: files1, names[1]: files2}
                 if len(dirs) == 3 and files3:
@@ -355,17 +375,27 @@ def main():
                         color=color_cycler[col],
                         linestyle=linestyle_cycler[col],
                     )
-                    legend.append(f'{i} {file.split(f"{need}-")[1].replace(".csv","")}')
+                    legend.append(
+                        f'{i} {file.split("/")[-1].split(f"{need}-")[1].replace(".csv","")}'
+                    )
                     col = col + 1
-
+                    if col == len(color_cycler):
+                        col = 0
             ## Format the ax
+            real_index = (
+                index.replace("_r", "")
+                .replace("_t", "")
+                .replace("_z", "")
+                .replace("_ur", "")
+                .replace("_ut", "")
+            )
             if args.r:
                 xlabel = "r [m]"
             elif args.z:
                 xlabel = "z [m]"
             elif args.theta:
                 xlabel = "theta [deg]"
-            ylabel = rf"{index} {units[index]}"
+            ylabel = rf"{index} {units[real_index]}"
             title = f"{name}{cooling} {index} {geos[0]} vs {geos[1]}"
             set_ax(ax, xlabel, ylabel, legend, title)
 
@@ -385,10 +415,12 @@ def main():
             ## if one of the result compared in 3D or 2D, make boxplot given r for theta
             if geos[0] in ["3D", "2D"]:
                 geotheta = geos[0]
+                nametheta = names[0]
                 dirtheta = dirs[0]
                 keytheta = "key1"
             elif geos[1] in ["3D", "2D"]:
                 geotheta = geos[1]
+                nametheta = names[1]
                 dirtheta = dirs[1]
                 keytheta = "key2"
 
@@ -396,58 +428,70 @@ def main():
                 filestheta = get_files_list(
                     "plots", dirtheta, row[keytheta], "vs-theta"
                 )
-
+                ## Ensure the "norm" filter is applied if length of files is not 1 (i.e. multiple files for 1 measure)
+                filestheta = filter_files(filestheta)
                 if filestheta and row["types"] in files:
-                    files[row["types"]][geotheta] = filestheta
+                    files[row["types"]][nametheta] = filestheta
 
             for index, values in files.items():
                 fig, ax = plt.subplots(figsize=(12, 8))
                 legend = []
                 print(f"    plot {index}-vs-r w/ Boxplot-vs-theta", flush=True)
+                toboxplot = []
                 for i, v in values.items():
-                    if i in ["3D", "2D"]:
-                        for file in v:
-                            df = pd.read_csv(file, index_col=0)
-                            r = float(file.split("r=")[-1].split("mm-z=")[0])
-                            measure = file.split("/")[-1].split("-vs-theta")[0]
-                            df["r"] = [r] * len(df[measure])
-                            df.boxplot(
-                                column=measure,
-                                by=["r"],
-                                positions=[r * 1e-3],
-                                widths=0.01,
-                                boxprops=dict(linestyle="-", linewidth=1.5, color="r"),
-                                flierprops=dict(
-                                    linestyle="-", linewidth=1.5, color="r"
-                                ),
-                                medianprops=dict(
-                                    linestyle="-", linewidth=1.5, color="r"
-                                ),
-                                whiskerprops=dict(
-                                    linestyle="-", linewidth=1.5, color="r"
-                                ),
-                                capprops=dict(linestyle="-", linewidth=1.5, color="r"),
-                                showfliers=True,
-                                ax=ax,
-                            )
-                            if legend:
-                                legend.append("_nolegend_")
-                            else:
-                                legend.append(
-                                    f'{i} z={file.split(f"z=")[1].replace(".csv","")}'
-                                )
+                    if args.mdata[i]["geo"] in ["3D", "2D"]:
+                        toboxplot.append((i, v))
+
                     else:
                         for file in v:
                             df = pd.read_csv(file, index_col=0)
+                            print(f"        file: {file.split('/')[-1]}")
+                            if "Jth" in file.split("/")[-1]:
+                                df[df.columns[1]] = abs(df[df.columns[1]])
                             df.plot(
                                 x=df.columns[0], y=df.columns[1], linewidth=3, ax=ax
                             )
                             legend.append(
-                                f'{i} {file.split(f"{need}-")[1].replace(".csv","")}'
+                                f'{i} {file.split("/")[-1].split(f"{need}-")[1].replace(".csv","")}'
                             )
 
+                for i, v in toboxplot:
+                    for file in v:
+                        df = pd.read_csv(file, index_col=0)
+                        print(f"        file: {file.split('/')[-1]}")
+                        r = float(file.split("/")[-1].split("r=")[-1].split("mm-z=")[0])
+                        measure = file.split("/")[-1].split("-vs-theta")[0]
+                        df["r"] = [r] * len(df[measure])
+                        df.boxplot(
+                            column=measure,
+                            by=["r"],
+                            positions=[r * 1e-3],
+                            widths=0.01,
+                            whis=[0, 100],
+                            boxprops=dict(linestyle="-", linewidth=1.5, color="r"),
+                            flierprops=dict(linestyle="-", linewidth=1.5, color="r"),
+                            medianprops=dict(linestyle="-", linewidth=1.5, color="r"),
+                            whiskerprops=dict(linestyle="-", linewidth=1.5, color="r"),
+                            capprops=dict(linestyle="-", linewidth=1.5, color="r"),
+                            showfliers=False,
+                            ax=ax,
+                        )
+                        if file == v[0]:
+                            legend.append(
+                                f'{i} z={file.split("/")[-1].split(f"z=")[1].replace(".csv","")}'
+                            )
+                        else:
+                            legend.append("_nolegend_")
+
+                real_index = (
+                    index.replace("_r", "")
+                    .replace("_t", "")
+                    .replace("_z", "")
+                    .replace("_ur", "")
+                    .replace("_ut", "")
+                )
                 xlabel = "r [m]"
-                ylabel = rf"{index} {units[index]}"
+                ylabel = rf"{index} {units[real_index]}"
                 title = f"{name}{cooling} {index} {geos[0]} vs {geos[1]}"
                 set_ax(ax, xlabel, ylabel, legend, title, xticks[index])
                 if show:
@@ -509,9 +553,12 @@ def main():
 
                 ## merge the images
                 for file1 in files1:
+                    # print(f"        file1: {file1.split('/')[-1]}")
                     for file2 in files2:
+                        # print(f"            file2: {file2.split('/')[-1]}")
                         if len(dirs) == 3:
                             for file3 in files3:
+                                print(f"                file3: {file3.split('/')[-1]}")
                                 savefile = f"{basedir}/views/{name}{cooling}-{row['types']}-{file1.split('/')[-1].replace('.png','')}-{file2.split('/')[-1].replace('.png','')}-{file3.split('/')[-1].replace('.png','')}.png"
                                 merge_images([file1, file2, file3], savefile)
                         else:

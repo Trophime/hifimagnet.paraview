@@ -59,9 +59,34 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Units": [ureg.tesla, ureg.tesla],
             "Exclude": [],
         },
+        "MagneticField_r": {
+            "Symbol": "Br",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticField_z": {
+            "Symbol": "Bz",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
+        "MagneticFieldnorm": {
+            "Symbol": "B",
+            "mSymbol": r"$\| B \|$",
+            "Units": [ureg.tesla, ureg.tesla],
+            "Exclude": [],
+        },
         "Temperature": {
             "Symbol": "T",
             "Units": [ureg.degK, ureg.degC],
+            "Exclude": ["Air"],
+        },
+        "TemperatureCoefficient": {
+            "Symbol": "alpha",
+            "mSymbol": r"$\alpha$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
             "Exclude": ["Air"],
         },
         "Stress_T": {
@@ -93,6 +118,31 @@ def dictTypeUnits(ureg, distance_unit: str):
         },
         "ForceLaplace": {
             "Symbol": "F",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_r": {
+            "Symbol": "Fr",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplace_z": {
+            "Symbol": "Fz",
+            "Units": [
+                ureg.newton / ureg.meter**3,
+                ureg.newton / ureg.Unit(distance_unit) ** 3,
+            ],
+            "Exclude": ["Air", "Isolant"],
+        },
+        "ForceLaplacenorm": {
+            "Symbol": "F",
+            "mSymbol": r"$\| F \|$",
             "Units": [
                 ureg.newton / ureg.meter**3,
                 ureg.newton / ureg.Unit(distance_unit) ** 3,
@@ -273,7 +323,7 @@ def addFieldToFieldunits(
         dict: updated fieldunits
     """
 
-    if Type in ["Displacement"]:
+    if Type in ["Displacement", "MagneticField", "ForceLaplace"]:
         for suffix in ["", "_r", "_z", "norm"]:
             fieldunits[f"{name}{suffix}"] = TypeUnits[f"{Type}{suffix}"]
             if Exclude:

@@ -98,10 +98,10 @@ def rectTocylField(input, key: str, nkey: str, AttributeType: str):
             f"rectTocylField: {key} - unsupported AttributeType: {AttributeType}"
         )
     inputDataPoint = [field.Name for field in input.PointData]
-    print(
-        f"rectTocylField: input PointData = {inputDataPoint}",
-        flush=True,
-    )
+    # print(
+    #     f"rectTocylField: input PointData = {inputDataPoint}",
+    #     flush=True,
+    # )
 
     # check if r exists already
     if "r" in inputDataPoint:

@@ -96,6 +96,15 @@ def dictTypeUnits(ureg, distance_unit: str):
             "Units": [ureg.degK, ureg.degC],
             "Exclude": ["Air"],
         },
+        "TemperatureCoefficient": {
+            "Symbol": "alpha",
+            "mSymbol": r"$\alpha$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
         "Stress_T": {
             "Symbol": "stress_T",
             "mSymbol": r"$\bar{\bar{\sigma}}_{T}$",
@@ -704,6 +713,7 @@ def create_dicts_fromjson(field_dict: dict, ureg, distance_unit: str, basedir: s
         "Bbg",
         "thermo_electric.pid",
         "pid",
+        "cfpdes.pid",
     ]
 
     with open(f"{basedir}/ignored_keys.json", "w") as fp:

@@ -64,6 +64,15 @@ def dictTypeUnits(ureg, distance_unit: str) -> dict:
             "Units": [ureg.degK, ureg.degC],
             "Exclude": ["Air"],
         },
+        "TemperatureCoefficient": {
+            "Symbol": "alpha",
+            "mSymbol": r"$\alpha$",
+            "Units": [
+                ureg.dimensionless,
+                ureg.dimensionless,
+            ],
+            "Exclude": ["Air"],
+        },
         "Stress_T": {
             "Symbol": "stress_T",
             "mSymbol": r"$\bar{\bar{\sigma}}_{T}$",

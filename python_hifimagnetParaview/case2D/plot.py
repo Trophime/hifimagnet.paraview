@@ -30,6 +30,7 @@ def plotOr(
     marker: str = None,
     axs: dict = None,  # dict of fig ax for each field
     greyspace: bool = False,
+    argsfield: str = None,
 ) -> dict:
     """plot vs r for a given theta
 
@@ -44,6 +45,7 @@ def plotOr(
         marker (str, optional): plot on specific marker. Defaults to None.
         axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
         greyspace (bool, optional): plot grey vertical bars to fill holes in plots (slits/channels). Defaults to False.
+        argsfield (str, optional): selected field to display. Defaults to None.
 
     Returns:
         dict: contains fig,ax,legend for each exported fields
@@ -129,7 +131,7 @@ def plotOr(
     # for field in input.PointData.keys():
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
     for field in datadict["PointData"]["Arrays"]:
-        if not field in ignored_keys:
+        if not field in ignored_keys and (not argsfield or field.startswith(argsfield)):
             kdata = datadict["PointData"]["Arrays"][field]
             Components = kdata["Components"]
             print(f"plotOrField for {field} - components={Components}", flush=True)
@@ -172,6 +174,7 @@ def plotTheta(
     verbose: bool = False,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
+    argsfield: str = None,
 ) -> dict:
     """plot along theta for a given r
 
@@ -187,6 +190,7 @@ def plotTheta(
         verbose (bool, optional): _description_. Defaults to False.
         marker (str, optional): plot on specific marker. Defaults to None.
         axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+        argsfield (str, optional): selected field to display. Defaults to None.
 
     Returns:
         dict: contains fig,ax,legend for each exported fields
@@ -304,7 +308,7 @@ def plotTheta(
     # requirements: create PointData from CellData
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
     for field in datadict["PointData"]["Arrays"]:
-        if not field in ignored_keys:
+        if not field in ignored_keys and (not argsfield or field.startswith(argsfield)):
             kdata = datadict["PointData"]["Arrays"][field]
             Components = kdata["Components"]
             print(f"plotThetaField for {field} - components={Components}", flush=True)
@@ -342,9 +346,7 @@ def plotTheta(
     return axs
 
 
-def makeplot(
-    args, reader, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str
-):
+def makeplot(args, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str):
     """different plot situations for 2D
 
     * if 2 args.r and args.theta: plot Or from r0 to r1 at theta=args.theta
@@ -352,7 +354,6 @@ def makeplot(
 
     Args:
         args: options
-        reader: paraview reader
         cellsize: paraview reader
         fieldunits (dict): dict of field units
         ignored_keys (list[str]): list of ignored fields
@@ -377,7 +378,9 @@ def makeplot(
                     basedir,
                     marker=args.plotsMarker,
                     axs=figaxs,
+                    argsfield=args.field,
                 )
+
             showplot(figaxs, f"-vs-theta", basedir, title=title, show=args.show)
             plt.close()
 
@@ -394,7 +397,9 @@ def makeplot(
                     marker=args.plotsMarker,
                     axs=figaxs,
                     greyspace=args.greyspace,
+                    argsfield=args.field,
                 )  # with r=[r1, r2]
+
             showplot(
                 figaxs,
                 f"-vs-r",

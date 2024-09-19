@@ -281,7 +281,7 @@ def main():
     # Plots
     if args.plots:
         os.makedirs(f"{basedir}/plots", exist_ok=True)
-        makeplot(args, reader, cellsize, fieldunits, ignored_keys, basedir)
+        makeplot(args, cellsize, fieldunits, ignored_keys, basedir)
 
     # When dealing with elasticity
     suffix = ""

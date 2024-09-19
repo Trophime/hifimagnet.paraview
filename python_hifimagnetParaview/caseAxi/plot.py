@@ -18,6 +18,7 @@ def plotOr(
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
     greyspace: bool = False,
+    argsfield: str = None,
 ) -> dict:
     """plot vs r for a given z
 
@@ -32,6 +33,7 @@ def plotOr(
         marker (str, optional): plot on specific marker. Defaults to None.
         axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
         greyspace (bool, optional): plot grey vertical bars to fill holes in plots (slits/channels). Defaults to False.
+        argsfield (str, optional): selected field to display. Defaults to None.
 
     Returns:
         dict: contains fig,ax,legend for each exported fields
@@ -121,7 +123,7 @@ def plotOr(
     # for field in input.PointData.keys():
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
     for field in datadict["PointData"]["Arrays"]:
-        if not field in ignored_keys:
+        if not field in ignored_keys and (not argsfield or field.startswith(argsfield)):
             kdata = datadict["PointData"]["Arrays"][field]
             Components = kdata["Components"]
             print(f"plotOrField for {field} - components={Components}", flush=True)
@@ -162,6 +164,7 @@ def plotOz(
     printed: bool = True,
     marker: str = None,
     axs: dict = None,  # dict of fig,ax for each field
+    argsfield: str = None,
 ) -> dict:
     """plot along z for a given r
 
@@ -175,6 +178,7 @@ def plotOz(
         printed (bool, optional): Defaults to True.
         marker (str, optional): plot on specific marker. Defaults to None.
         axs (dict, optional): dict containing fig,ax,legend for each exported fields. Defaults to None.
+        argsfield (str, optional): selected field to display. Defaults to None.
 
     Returns:
         dict: contains fig,ax,legend for each exported fields
@@ -242,6 +246,7 @@ def plotOz(
 
         ax.set_xlabel("z [m]", fontsize=18)
         ax.set_ylabel(rf"{symbol} [{out_unit:~P}]", fontsize=18)
+        keycsv.to_csv(f"{basedir}/plots/{key}-vs-z-r={r_mm}mm.csv")
 
         # ax.yaxis.set_major_locator(MaxNLocator(10))
         return legend
@@ -250,7 +255,7 @@ def plotOz(
     # for field in input.PointData.keys():
     datadict = resultinfo(cellDatatoPointData1, ignored_keys)
     for field in datadict["PointData"]["Arrays"]:
-        if not field in ignored_keys:
+        if not field in ignored_keys and (not argsfield or field.startswith(argsfield)):
             kdata = datadict["PointData"]["Arrays"][field]
             Components = kdata["Components"]
             print(f"plotOzField for {field} - components={Components}", flush=True)
@@ -272,9 +277,7 @@ def plotOz(
     return axs
 
 
-def makeplot(
-    args, reader, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str
-):
+def makeplot(args, cellsize, fieldunits: dict, ignored_keys: list[str], basedir: str):
     """different plot situations for Axi
 
     * if 2 args.r and args.z: plot Or from r0 to r1 at z=args.z
@@ -282,7 +285,6 @@ def makeplot(
 
     Args:
         args: options
-        reader: paraview reader
         cellsize: paraview reader
         fieldunits (dict): dict of field units
         ignored_keys (list[str]): list of ignored fields
@@ -302,7 +304,7 @@ def makeplot(
             for z in args.z:
                 # add plot for each z to dict
                 figaxs = plotOr(
-                    reader,
+                    cellsize,
                     args.r,
                     z,
                     fieldunits,
@@ -311,15 +313,17 @@ def makeplot(
                     marker=args.plotsMarker,
                     axs=figaxs,
                     greyspace=args.greyspace,
+                    argsfield=args.field,
                 )  # with r=[r1, r2], z: float
             # plot every field with all z
+
             showplot(figaxs, f"-vs-r", basedir, title=title, show=args.show)
             plt.close()
         if len(args.z) == 2:
             figaxs = {}
             for r in args.r:
                 figaxs = plotOz(
-                    reader,
+                    cellsize,
                     r,
                     args.z,
                     fieldunits,
@@ -327,6 +331,8 @@ def makeplot(
                     basedir,
                     marker=args.plotsMarker,
                     axs=figaxs,
+                    argsfield=args.field,
                 )  # with r: float, z=[z1,z2]
+
             showplot(figaxs, f"-vs-z", basedir, title=title, show=args.show)
             plt.close()
