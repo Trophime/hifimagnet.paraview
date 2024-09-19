@@ -52,5 +52,6 @@
     "magnetic_potential": "MagneticPotential",
     "magneticPotential": "MagneticPotential",
     "HoopStrain": "HoopStrain",
-    "HoopStress": "HoopStress"
+    "HoopStress": "HoopStress",
+    "alpha": "TemperatureCoefficient"
 }
